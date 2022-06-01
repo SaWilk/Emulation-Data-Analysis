@@ -1,0 +1,470 @@
+---
+title: "Datachecks Tracking Task A, N = 12/23"
+output:
+  html_document:
+    toc: TRUE
+---
+# preparations
+
+1) install packages
+
+```{r}
+library(ggplot2) #plots
+library(reticulate) # read npz files
+```
+
+
+2) define variables & paths
+3) load data for all subjects, all trials in nested list
+
+```{r load data, echo = T}
+trials = 72
+
+behav_dir = ("R:/AG-Beste-Studien/Emulation/04_data/behav")
+behav_subdirs = grep(list.files(behav_dir, pattern = "*_A"), pattern = "csv|npz", invert = TRUE, value = TRUE)
+
+list_all_sub = list()
+
+for (i in 1: length(behav_subdirs)){
+  subj_path = paste(behav_dir, "/", behav_subdirs[i], sep = "")
+  setwd(subj_path)
+  list_all_sub[[i]] = list()
+  names(list_all_sub)[i] = behav_subdirs[i]
+  for (j in 1: trials){
+    name_trialfile = paste(strsplit(behav_subdirs[i], split = "_")[[1]][1], "_traj_purs_", j, ".csv", sep = "")
+    list_all_sub[[i]][[j]] = read.csv(name_trialfile, header = T, sep = ",")
+  }
+}
+
+```
+# overview
+## some basic plots
+
+plots for trajectory, pursuit and error curve, single trial
+
+```{r plots_single_trial, echo = T}
+library(ggplot2)
+
+df_038GC_20 = as.data.frame(list_all_sub$`038GC_A`[[70]])
+
+ggplot(data = df_038GC_20, aes(x = (1:length(traj.x))/60, y = traj.y)) +
+  #ggtitle("038GC_A, trial 1") +
+  geom_line() +
+  geom_line(aes(x = (1:length(traj.x))/60, y = purs.y), color= "blue")+
+  geom_line(aes(x = (1:length(traj.x))/60, y = error), color = "red") +
+  labs(x = "seconds", y = "")
+  
+
+```
+
+
+## some statistics on mean error
+
+1) load trialfiles for all subjects
+2) save as list for further analyses
+
+```{r}
+trials = 72
+
+behav_dir = ("R:/AG-Beste-Studien/Emulation/04_data/behav")
+behav_subdirs = grep(list.files(behav_dir, pattern = "*_A"), pattern = "csv|npz", invert = TRUE, value = TRUE)
+
+list_trial_info = list()
+
+for (i in 1: length(behav_subdirs)){
+  subj_path = paste(behav_dir, "/", behav_subdirs[i], sep = "")
+  setwd(subj_path)
+  list_trial_info[[i]] = list()
+  names(list_trial_info)[i] = behav_subdirs[i]
+  name_trialfile = paste(behav_subdirs[i], "_trialdata.csv", sep = "")
+  list_trial_info[[i]] = read.csv(name_trialfile, header = T, sep = ",")
+}
+
+```
+
+### mean error across trial
+
+to check if the error peak at trial start is just noise 
+
+```{r}
+trials = 72
+
+behav_dir = ("R:/AG-Beste-Studien/Emulation/04_data/behav")
+markers_dir = ("R:/AG-Beste-Studien/Emulation/05_automagic/Analyzer/export")
+
+behav_subdirs = grep(list.files(behav_dir, pattern = "*_A"), pattern = "Tracking|Traj", invert = TRUE, value = TRUE)
+marker_files = list.files(markers_dir, pattern = "pp_AM.*_A_removed_practice_with_last_trigger.Markers")
+
+# get subject ids from marker files (not all behavioral datasets have markerfiles)
+subject_ids = vector()
+for (i in 1:length(marker_files)) {
+  subject_ids[i] = strsplit(marker_files[i], split = "_")[[1]][3]
+}
+
+means_all = matrix(NA, 72, 400)
+for (i in 1: trials) {
+  this_trial_means = matrix(NA, 12, 400)
+  for (ii in 1:length(subject_ids)) {
+    this_trial_means[ii, ] = as.data.frame(list_all_sub[[ii]][i])$error_abs[1:400]
+  }
+  means_all[i, ] = colMeans(this_trial_means)
+}
+means_time = colMeans(means_all)
+plot(means_time, type = "l", ylab = "mean error across subjects", xlab = "frames")
+
+```
+
+systematic peak of error during the first 100 frames --> only analyze from 100th frame on 
+
+### check RMSD for single subject
+
+```{r}
+df_09WM9 = as.data.frame(list_trial_info$`09WM9_A`)
+ggplot(data = df_09WM9) +
+  geom_line(aes(x = Trial, y = rmsd)) +
+  geom_hline(aes(yintercept = median(rmsd)))
+
+```
+
+### check rmsd for all subjects
+
+one dataframe with all trials for all subjects
+
+```{r eval = F}
+dataframe_all = matrix(nrow = trials, ncol = length(behav_subdirs))
+for (i in 1: length(behav_subdirs)){
+ dataframe_all[ ,i] = list_trial_info[[i]]$rmsd
+}
+colnames(dataframe_all) = behav_subdirs
+
+dataframe_all = t(dataframe_all)
+colnames(dataframe_all) = 1:72
+```
+
+### calculate mean over subjects, plot trials
+
+```{r eval = F}
+means_sub = rowMeans(dataframe_all)
+plot(means_sub, type = "l")
+```
+
+### compare early and late trials
+early trials: trial 20-30
+late trials: trial 60-70
+calculate mean for trialsets and save as dataframe
+
+```{r eval = F}
+t.test(dataframe_all[20:29, ], dataframe_all[60:69, ])
+
+```
+# compare constant and random trajectory performance
+
+## prepare the data
+
+Read trigger data and get behavioral frames for trigger 27, 23, 24, 12
+
+then, calculate mean error for random and constant trajectory parts and compare
+
+```{r, echo = T, eval = F}
+
+behav_dir = ("R:/AG-Beste-Studien/Emulation/04_data/behav")
+markers_dir = ("R:/AG-Beste-Studien/Emulation/05_automagic/Analyzer/export")
+
+behav_subdirs = grep(list.files(behav_dir, pattern = "*_A"), pattern = "Tracking|Traj", invert = TRUE, value = TRUE)
+marker_files = list.files(markers_dir, pattern = "pp_AM.*_A_removed_practice_with_last_trigger.Markers")
+
+# get subject ids from marker files (not all behavioral datasets have markerfiles)
+subject_ids = vector()
+for (i in 1:length(marker_files)) {
+  subject_ids[i] = strsplit(marker_files[i], split = "_")[[1]][3]
+}
+for (j in 1:length(subject_ids)) {
+  this_subdir = paste(behav_dir, "/", subject_ids[j], "_A", sep= "")
+  this_markerfile = marker_files[j]
+  setwd(this_subdir)
+  trialfiles = list.files(this_subdir, pattern = "*_traj_")
+  setwd(markers_dir)
+  trialsamples = vector()
+  markerfile = as.data.frame(read.table(this_markerfile, skip = 1, sep = ",", header = T)[, 2:3])
+  rows_markers = which(markerfile[1] == " S 27" | markerfile[1] == " S 23" | markerfile[1] == " S 24" | markerfile[1] == " S 12" | markerfile[1] == " S 16")
+  trial_markers = markerfile[rows_markers, ]
+  rownames(trial_markers) = NULL
+  trial_markers[ ,3] = NA
+  trial_markers[ ,4] = NA
+  colnames(trial_markers) <- c("marker", "eeg_sample", "trial_sample", "perc")
+  rows_27 = which(trial_markers[,1] == " S 27")
+  for (k in 1: length(rows_27)) {
+    trial_markers[rows_27[k] +1, 3] = trial_markers[rows_27[k] +1, 2] - trial_markers[rows_27[k], 2]
+    trial_markers[rows_27[k] +2, 3] = trial_markers[rows_27[k] +2, 2] - trial_markers[rows_27[k], 2]
+    trial_markers[rows_27[k] +3, 3] = trial_markers[rows_27[k] +3, 2] - trial_markers[rows_27[k], 2]
+    trial_markers[rows_27[k], 3] = 0
+  }
+  trial_markers = trial_markers[complete.cases(trial_markers[ , 3]), ]
+  rows_12_16 = which(trial_markers[,1] == " S 12"  | trial_markers[,1] == " S 16")
+  rows_27 = which(trial_markers[,1] == " S 27")
+  for (l in 1: length(rows_12_16)) {
+    trial_markers[rows_12_16[l], 4] = trial_markers[rows_12_16[l], 3] / trial_markers[rows_12_16[l], 3]
+    trial_markers[rows_12_16[l] -1, 4] = trial_markers[rows_12_16[l] -1, 3] / trial_markers[rows_12_16[l], 3]
+    trial_markers[rows_12_16[l] -2, 4] = trial_markers[rows_12_16[l] -2, 3] / trial_markers[rows_12_16[l], 3]
+    trial_markers[rows_12_16[l] -3, 4] = trial_markers[rows_12_16[l] -3, 3] / trial_markers[rows_12_16[l], 3]
+  }
+  setwd(this_subdir)
+  for (z in 1: length(trialfiles)) {
+    #list_all_reduced[[j]][[z]] = list()
+    trial_df = read.csv(trialfiles[z], header = T, sep = ",")
+    start_const = (ceiling(trial_markers[rows_27[z]+ 1, 4] * nrow(trial_df)))
+    end_const = (ceiling(trial_markers[rows_27[z]+ 2, 4] * nrow(trial_df))) 
+    rand1 = trial_df[1:start_const, ]
+    rand2 = trial_df[end_const: nrow(trial_df), ]
+    const = trial_df[start_const:end_const, ]
+    file_const = paste(subject_ids[j], "_const_", z, ".csv", sep = "")
+    file_rand1 = paste(subject_ids[j], "_rand1_", z, ".csv", sep = "")
+    file_rand2 = paste(subject_ids[j], "_rand2_", z, ".csv", sep = "")
+    write.csv(const, file = file_const)
+    write.csv(rand1, file = file_rand1)
+    write.csv(rand2, file = file_rand2)
+  }
+}
+
+
+```
+
+## create dataframe with all subjects and means
+
+```{r create_df, eval = F, echo = T}
+behav_dir = ("R:/AG-Beste-Studien/Emulation/04_data/behav")
+markers_dir = ("R:/AG-Beste-Studien/Emulation/05_automagic/Analyzer/export")
+
+behav_subdirs = grep(list.files(behav_dir, pattern = "*_A"), pattern = "Tracking|Traj", invert = TRUE, value = TRUE)
+marker_files = list.files(markers_dir, pattern = "pp_AM.*_A_removed_practice_with_last_trigger.Markers")
+
+# get subject ids from marker files (not all behavioral datasets have markerfiles)
+subject_ids = vector()
+for (i in 1:length(marker_files)) {
+  subject_ids[i] = strsplit(marker_files[i], split = "_")[[1]][3]
+}
+
+trials = 72
+
+dataframe = data.frame()
+for (i in 1: length(subject_ids)) {
+  this_subdir = paste(behav_dir, "/", subject_ids[i], "_A", sep= "")
+  setwd(this_subdir)
+  dataframe[i, 1] = subject_ids[i]
+  const_data = vector()
+  rand1_data = vector()
+  rand2_data = vector()
+  wholetrial_data = vector()
+  
+  for (ii in 1: trials) {
+    filename = paste(subject_ids[i], "_const_", ii, ".csv", sep = "")
+    data_const = read.csv(filename, header = T, sep = ",")
+    const_data[ii] = mean(data_const$error_abs)
+    
+    filename = paste(subject_ids[i], "_rand1_", ii, ".csv", sep = "")
+    data_rand1 = read.csv(filename, header = T, sep = ",")
+    rand1_data[ii] = mean(data_rand1$error_abs)
+    
+    filename = paste(subject_ids[i], "_rand2_", ii, ".csv", sep = "")
+    data_rand2 = read.csv(filename, header = T, sep = ",")
+    rand2_data[ii] = mean(data_rand2$error_abs)
+    
+    filename = paste(subject_ids[i], "_traj_purs_", ii, ".csv", sep = "")
+    data_wt = read.csv(filename, header = T, sep = ",")
+    wholetrial_data[ii] = mean(data_wt$error_abs)
+    
+  }
+  dataframe[i, 2] = mean(const_data)
+  dataframe[i, 3] = mean(rand1_data)
+  dataframe[i, 4] = mean(rand2_data)
+  dataframe[i, 5] = mean(wholetrial_data)
+}
+colnames(dataframe) = c("subject_id", "mean_const", "mean_rand1", "mean_rand2", "mean_whole_trial")
+
+setwd(behav_dir)
+write.csv(dataframe, file = "20210903_dataframe_means.csv")
+
+```
+
+## create dataframe with all subjects and means, split for early and late trials
+
+```{r, eval = F}
+
+behav_dir = ("R:/AG-Beste-Studien/Emulation/04_data/behav")
+markers_dir = ("R:/AG-Beste-Studien/Emulation/05_automagic/Analyzer/export")
+
+behav_subdirs = grep(list.files(behav_dir, pattern = "*_A"), pattern = "Tracking|Traj", invert = TRUE, value = TRUE)
+marker_files = list.files(markers_dir, pattern = "pp_AM.*_A_removed_practice_with_last_trigger.Markers")
+
+# get subject ids from marker files (not all behavioral datasets have markerfiles)
+subject_ids = vector()
+for (i in 1:length(marker_files)) {
+  subject_ids[i] = strsplit(marker_files[i], split = "_")[[1]][3]
+}
+
+trials = 72
+
+list_subjects = list()
+for (i in 1: length(subject_ids)) {
+  this_subdir = paste(behav_dir, "/", subject_ids[i], "_A", sep= "")
+  setwd(this_subdir)
+  dataframe[i, 1] = subject_ids[i]
+  const_data = vector()
+  rand1_data = vector()
+  rand2_data = vector()
+  wholetrial_data = vector()
+  list_subjects[[i]] = list()
+  
+  for (ii in 1: trials) {
+    filename = paste(subject_ids[i], "_const_", ii, ".csv", sep = "")
+    data_const = read.csv(filename, header = T, sep = ",")
+    const_data[ii] = mean(data_const$error_abs)
+    
+    filename = paste(subject_ids[i], "_rand1_", ii, ".csv", sep = "")
+    data_rand1 = read.csv(filename, header = T, sep = ",")
+    rand1_data[ii] = mean(data_rand1$error_abs)
+    
+    filename = paste(subject_ids[i], "_rand2_", ii, ".csv", sep = "")
+    data_rand2 = read.csv(filename, header = T, sep = ",")
+    rand2_data[ii] = mean(data_rand2$error_abs)
+    
+    filename = paste(subject_ids[i], "_traj_purs_", ii, ".csv", sep = "")
+    data_wt = read.csv(filename, header = T, sep = ",")
+    wholetrial_data[ii] = mean(data_wt$error_abs)
+    
+  }
+  
+  list_subjects[[i]]$const = const_data
+  list_subjects[[i]]$rand1 = rand1_data
+  list_subjects[[i]]$rand2 = rand2_data
+  list_subjects[[i]]$wholetrial = wholetrial_data
+}
+
+# prepare dataframe
+
+dataframe = data.frame()
+for (i in 1: length(subject_ids)) {
+  dataframe[i, 1] = subject_ids[i]
+  dataframe[i, 2] = mean(list_subjects[[i]]$wholetrial[1:24])
+  dataframe[i, 3] = mean(list_subjects[[i]]$wholetrial[25:48])
+  dataframe[i, 4] = mean(list_subjects[[i]]$wholetrial[49:72])
+  dataframe[i, 5] = mean(list_subjects[[i]]$const[1:24])
+  dataframe[i, 6] = mean(list_subjects[[i]]$const[25:48])
+  dataframe[i, 7] = mean(list_subjects[[i]]$const[49:72])
+  dataframe[i, 8] = mean(list_subjects[[i]]$rand1[1:24])
+  dataframe[i, 9] = mean(list_subjects[[i]]$rand1[25:48])
+  dataframe[i, 10] = mean(list_subjects[[i]]$rand1[49:72])
+  dataframe[i, 11] = mean(list_subjects[[i]]$rand2[1:24])
+  dataframe[i, 12] = mean(list_subjects[[i]]$rand2[25:48])
+  dataframe[i, 13] = mean(list_subjects[[i]]$rand2[49:72])
+}
+colnames(dataframe) = c("subject", "wholetrial1", "wholetrial2", "wholetrial3", "const1", "const2", "const3", "rand11", "rand12", "rand13", "rand21", "rand22", "rand23")
+
+setwd("R:/AG-Beste-Studien/Emulation/04_data")
+write.csv(dataframe, file = "behav_means.csv")
+
+```
+
+# exploratory analysis task C
+
+read data
+
+1) trialdata C --> velocity, accuracy
+
+```{r eval = F, echo=T}
+
+#set data directory
+# datadir = ("R:/AG-Beste-Studien/Emulation/04_data/behav/00_npz_files")
+datadir = ("/Users/adriana/Dropbox/transfer_kjp/210909_behav_data")
+setwd(datadir)
+
+#packages
+library(reticulate)
+
+#import python 
+np <- import("numpy")
+
+#read files + number of subjects
+
+n_files_C = length(list.files(datadir, pattern = "Tracking.*_C"))
+files_C =  list.files(datadir, pattern = "Tracking.*_C")
+
+#subject ids
+sbj_ids = vector()
+for (i in 1:n_files_C) {
+  sbj_ids[i] = strsplit(files_C[i], split = "-")[[1]][2]
+  sbj_ids[i] = strsplit(sbj_ids[i], split = "_")[[1]][1]
+}
+
+trialnum = 72
+
+#load data from npz, save as list
+
+list_c = list()
+for (i in 1:n_files_C) {
+  filename = paste("Tracking-", sbj_ids[i], "_C-Trials.npz", sep = "")
+  data <- np$load(filename, allow_pickle = TRUE)
+  data_list = data$f[["arr_0"]][[1]]
+  list_c[[i]] = data_list
+}
+
+names(list_c) <- sbj_ids
+
+rm(data_list)
+rm(filename)
+
+#create dataframe for every subject
+
+# output_dir = ("R:/AG-Beste-Studien/Emulation/04_data/behav")
+output_dir = ("/Users/adriana/Dropbox/transfer_kjp")
+setwd(output_dir)
+
+for (i in 1:length(sbj_ids)) {
+  df = as.data.frame(cbind(as.vector(unlist(list_c[[i]]$Velocity)), list_c[[i]]$Direction, list_c[[i]]$Accuracy_C))
+  colnames(df) <- c("vel", "dir", "accuracy")
+  filename = paste(sbj_ids[i], "_trials_c.csv", sep = "")
+  write.csv(df, file = filename, row.names = T)
+}
+
+```
+
+2) trajectory choice
+
+```{r eval = F, echo = T}
+
+#set data directory
+datadir = ("R:/AG-Beste-Studien/Emulation/04_data/behav/00_npz_files")
+setwd(datadir)
+
+#packages
+library(reticulate)
+
+#import python 
+np <- import("numpy")
+
+#read files + number of subjects
+
+choice_files =  list.files(datadir, pattern = "Traj_choice*")
+
+#subject ids
+sbj_ids = vector()
+for (i in 1:length(choice_files)) {
+  sbj_ids[i] = strsplit(choice_files[i], split = "-")[[1]][2]
+  sbj_ids[i] = strsplit(sbj_ids[i], split = "_")[[1]][1]
+}
+
+# extract data from npz file
+
+list_traj_choice = list()
+
+for (i in 1:length(sbj_ids)) {
+  filename = paste("Traj_choice-", sbj_ids[i], "_C.npz", sep = "")
+  data <- np$load(filename, allow_pickle = TRUE)
+  data_list = data$f[["arr_0"]][[1]]
+  list_traj_choice[[i]] = data_list
+}
+
+
+```
+
+
