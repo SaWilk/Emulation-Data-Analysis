@@ -1,0 +1,5 @@
+*.npz
+*.eeg
+*.vmrk
+*.vhdr
+00_npz_files/
