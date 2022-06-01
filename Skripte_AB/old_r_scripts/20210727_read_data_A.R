@@ -13,7 +13,14 @@ if (require(reticulate) == FALSE) {
 }
 
 #set data directory
-datadir = ("R:/AG-Beste-Studien/Emulation/04_data/behav")
+this_dir = dirname(rstudioapi::getSourceEditorContext()$path)
+
+# select emulation task data analysis main directory
+parent_dir = strsplit(this_dir,"/")
+parent_dir = parent_dir[[1]][1:(length(parent_dir[[1]])-2)]
+parent_dir = paste(parent_dir,collapse ="/" )
+
+datadir = paste(parent_dir, "00_npz_files", sep="/")
 setwd(datadir)
 
 #import python 
