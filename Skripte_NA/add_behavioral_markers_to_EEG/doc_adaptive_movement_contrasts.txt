@@ -1,0 +1,43 @@
+Documentation: adaptive movement contrasts
+----------------------------------------------------------------------------------
+GENERAL INFORMATION
+-------------------
+- functions are stored in functions_adaptive_movement_contrasts.py
+- markers are calculated in behavior_to_EEG_adaptive_movement_contrasts.ipynb
+
+- needed to execute scripts:
+	- .Markers files exported from BVA after deleting practice interval
+	- behavioral data in folder structure according to subject & task (preprocessed by R-script R:\AG-Beste-Studien\Emulation\06_analysis\r_scripts) --> folder consists of one file per trial + one overview file
+
+- output: 
+	- new .txt marker files for every subjects --> import in BVA for segmentation etc.
+----------------------------------------------------------------------------------
+
+- functions for calculating 4 types of events:
+	maximum of error curve
+	minimum of error curve
+	direction change in pursuit
+	direction keep in pursuit (space between two peaks)
+
+- find time points for match of these events for calculating contrasts based on behavioral data:
+0	errormax & dirchange		= adaptive movement		= contrast_1 > 0 & contrast_2 = True 
+1	errormax & dirkeep 		= no adaptive movement		= contrast_1 > 0 & contrast_2 = False
+2	errormin & dirchange		= "false" adaptation		= contrast_1 = -1 & contrast_2 = True
+3	errormin & dirkeep		= "good" dirkeep		= contrast_1 = -1 & contrast_2 = False
+
+- after finding match of the events, transfer this to EEG samples to set markers 
+-----------------------------------------------------------------------------------
+EXPLANATION ON FUNCTIONS
+------------------------
+
+behavioral_events_in_EEG_format
+	pursuit is lowpass-filtered (cutoff = 0.05 units)
+	filtered/original data are processed get_extrema --> depending on contrasts, min+max, only max or values between extrema are given
+	samples (x) + samples_vals (y) are given --> check that there are at least 5 samples to both sides to only include "valid" points (min_ramps)
+	calculate percentage of samples in behavioral dimension for every condition (to apply to EEG samples)
+
+behavioral_events_to_EEG
+	reads behavioral information + marker file and information on samples of each trial 
+	loop for both contrasts: EEG samples for all 4 conditions are extracted
+	matching samples for all 4 conditions are extracted
+	for every subject, all 4 conditions are plotted

@@ -1,0 +1,12 @@
+script for adding triggers at timepoint of adaptive movements 
+
+adaptive movement = maximum of error curve & direction change (minimum/ maximum) of pursuit at the same time 
+
+steps:
+	1) load behavioral data (preprocessed with r script) --> absolute error curve + pursuit data
+	2) filter pursuit and error data --> lowpass filter 0.05 (Hz?)
+	3) identify maxima (and minima if pursuit) of error curve and pursuit data
+		minimum value for ramp up/down: 7 samples (~100 ms) to ensure no overlapping events + no random movement
+	4) identify EEG sample to synchronize data
+	5) select 10 biggest maxima of error curve and ... of pursuit
+	6) search for matching samples, indicating error maximum AND direction change (with tolerance of 30 (~500 ms) samples 	before and after ...)
