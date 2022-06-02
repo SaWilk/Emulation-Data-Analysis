@@ -5,6 +5,8 @@
 #TASK A
 #-----------------------------------------
 #preparations
+rm(list=ls()) # clears the workspace
+cat("\014") # clears the console
 
 # install package for python extension
 if (require(reticulate) == FALSE) {
@@ -28,7 +30,7 @@ np <- import("numpy")
 
 #read files + number of subjects
 n_files_all = length(list.files(datadir, pattern = "Tracking"))
-n_subj = ceiling(n_files/3)
+n_subj = ceiling(n_files_all/3) # assumes that all three task files are in the same folder
 
 n_files_A = length(list.files(datadir, pattern = "Tracking.*_A"))
 files_A =  list.files(datadir, pattern = "Tracking.*_A")
