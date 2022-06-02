@@ -34,7 +34,7 @@ rawdata_dir = 'R:\AG-Beste-Studien\Emulation\04_data\EEG\raw';
 cd(rawdata_dir);
 
 % data path for data saving
-savepath = strcat(parent_dir, "\EEG_processed_taskB");  
+savepath = "R:\AG-Beste-Studien\Emulation\06_analysis\output_analysis_task_B\01_preprocessed";  
 
 %list all *.vhdr files in data directory
 filenames = dir('*B*.vhdr');
