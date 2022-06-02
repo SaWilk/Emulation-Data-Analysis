@@ -2,7 +2,7 @@
 % Emulation pilot study 2021
 
 % Script C contains:
-% IC-label for extracting neural components
+% TF decomposition for occlusion and reappearance
 
 % Adriana Boettcher
 % 02.06.2022
@@ -26,7 +26,18 @@ cd(inputpath);
 savepath = "R:\AG-Beste-Studien\Emulation\06_analysis\output_analysis_task_B\03_tf";  
 
 %list all *.set files in inputpath
-filenames = dir('*epoched*.set');
+filenames = dir('*icaclean*.set');
 
 %concatenate into one cell array
 files2read = {filenames.name};
+
+%% loop through files generated with script B (IClabel)
+
+for ind = 1:length(filenames)
+
+    % import the data file
+    TMPEEG = pop_loadset('filename', files2read(ind), 'filepath', char(inputpath));
+    
+    
+
+end
