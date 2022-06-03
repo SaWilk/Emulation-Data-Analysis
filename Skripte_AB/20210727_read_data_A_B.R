@@ -45,7 +45,7 @@ n_files_A = length(files_A)
 #extract and enumerate subject ids
 #cave: subject numbers are not in real order
 #todo: extract from excel file 
-subj_ids_b = matrix(NA, length(files_A), 2) 
+subj_ids_a = matrix(NA, length(files_A), 2) 
 for (i in 1:n_files_A) {
   subj_ids_a[i ,1] = substr(files_A[i], 10, 14)
   subj_ids_a[i, 2] = i
