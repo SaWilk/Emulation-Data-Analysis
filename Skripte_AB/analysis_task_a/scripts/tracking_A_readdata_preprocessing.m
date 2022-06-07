@@ -149,8 +149,8 @@ for ind = 1:length(filenames)
      %TMPEEG = pop_saveset(TMPEEG,'filename',[files2read{ind}(1:end-7) '_B_runica'], 'filepath', char(savepath));
      
 
-    % create epochs for occlusion and reappear
-    % set epoch limits to 0-2
+    % create epochs for constant and random traj
+    % set epoch limits to 0-2 
     TMPEEG = pop_epoch( TMPEEG, {'S 23' 'S 24' 'S 27'}, [0 2], 'newname', [TMPEEG.setname '_A_epoched'], 'epochinfo', 'yes');
     
     %baseline correction was applied for const/rand, skip that here
