@@ -1,4 +1,4 @@
-% Data Analysis Pursuit-Occlusion Paradigm
+% Data Analysis Pursuit-Tracking Paradigm
 % Emulation pilot study 2021
 
 % Script A contains:
@@ -8,7 +8,7 @@
 % - export in EEGlab format
 
 % Adriana Boettcher
-% 01.06.2022
+% 06.06.2022
 
 %% clear workspace
 clear;
@@ -34,10 +34,10 @@ rawdata_dir = 'R:\AG-Beste-Studien\Emulation\04_data\EEG\raw';
 cd(rawdata_dir);
 
 % data path for data saving
-savepath = "R:\AG-Beste-Studien\Emulation\06_analysis\output_analysis_task_B\01_preprocessed";  
+savepath = "R:\AG-Beste-Studien\Emulation\06_analysis\output_analysis_task_A\01_preprocessed";  
 
 %list all *.vhdr files in data directory
-filenames = dir('*B*.vhdr');
+filenames = dir('*A*.vhdr');
 
 %concatenate into one cell array
 files2read = {filenames.name};
@@ -57,11 +57,11 @@ for ind = 1:length(filenames)
     
     %apply add_occl_events --> create OCCL var in EEG.event (coding
     %occlusion  = on/off/none
-    TMPEEG = add_occl_events(TMPEEG);
+    TMPEEG = add_traj_events(TMPEEG);
     
     %remove all events for OCCL = "none" --> occlusion events are the only
     %that remain
-    TMPEEG = rm_occl_none(TMPEEG);    
+    TMPEEG = rm_traj_none(TMPEEG);    
 
     %define setname (remove file ending)
     TMPEEG.setname = files2read{ind}(1:end-4);
@@ -71,7 +71,7 @@ for ind = 1:length(filenames)
     TMPEEG.group = 'Control';    
 
     %define condition
-    TMPEEG.condition = 'TaskB';
+    TMPEEG.condition = 'TaskA';
 
     % define subject
     substring = files2read{ind}(1:end-7);
@@ -151,12 +151,12 @@ for ind = 1:length(filenames)
 
     % create epochs for occlusion and reappear
     % set epoch limits to 0-2
-    TMPEEG = pop_epoch( TMPEEG, {'S 20'  'S 21'}, [0 2], 'newname', [TMPEEG.setname '_B_epoched'], 'epochinfo', 'yes');
+    TMPEEG = pop_epoch( TMPEEG, {'S 23' 'S 24' 'S 27'}, [0 2], 'newname', [TMPEEG.setname '_A_epoched'], 'epochinfo', 'yes');
     
     %baseline correction was applied for const/rand, skip that here
     %TMPEEG = pop_rmbase( TMPEEG, [-1000 0] ,[]);
     
     %save epoched data
-    TMPEEG = pop_saveset(TMPEEG,'filename',[files2read{ind}(1:end-7) '_B_epoched'], 'filepath', char(savepath));
+    TMPEEG = pop_saveset(TMPEEG,'filename',[files2read{ind}(1:end-7) '_A_epoched'], 'filepath', char(savepath));
      
 end

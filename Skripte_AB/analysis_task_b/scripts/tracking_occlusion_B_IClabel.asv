@@ -33,7 +33,7 @@ files2read = {filenames.name};
 
 %% loop through files generated with script A (preprocessed EEG data)
 
-for ind = 9 %1:length(filenames)
+for ind = 25 %1:length(filenames)
     
     % import the data file
     TMPEEG = pop_loadset('filename', files2read(ind), 'filepath', char(inputpath));
