@@ -180,7 +180,7 @@ for (i in 1:n_files_A) {
   colnames(data_export) = c("Trial", "Dur", "Dir", "rmsd")
   write.csv(data_export, file = file_name, row.names = FALSE)
   for (j in 1:trialnum) {
-    file_name_2 = paste(subj_ids_a[i], "_traj_purs_", j, ".csv", sep = "")
+    file_name_2 = paste(subj_ids_a[i], "_traj_purs_", sprintf("%02d", j), ".csv", sep = "")
     data_export_2 = as.data.frame(cbind(list_a[[i]]$Trajectory[j][[1]], list_a[[i]]$Pursuit[j][[1]], list_a[[i]]$error[j][[1]], list_a[[i]]$error_abs[j][[1]]))
     colnames(data_export_2) <- c("traj-x", "traj-y", "purs-x", "purs-y", "error", "error_abs")
     write.csv(data_export_2, file = file_name_2, row.names = FALSE)
@@ -201,7 +201,7 @@ for (i in 1:n_files_B) {
   colnames(data_export) = c("Trial", "Dur", "Dir", "rmsd")
   write.csv(data_export, file = file_name, row.names = FALSE)
   for (j in 1:trialnum) {
-    file_name_2 = paste(subj_ids_b[i], "_traj_purs_", j, ".csv", sep = "")
+    file_name_2 = paste(subj_ids_b[i], "_traj_purs_", sprintf("%02d", j), ".csv", sep = "")
     data_export_2 = as.data.frame(cbind(list_b[[i]]$Trajectory[j][[1]], list_b[[i]]$Pursuit[j][[1]], list_b[[i]]$error[j][[1]], list_b[[i]]$error_abs[j][[1]]))
     colnames(data_export_2) <- c("traj-x", "traj-y", "purs-x", "purs-y", "error", "error_abs")
     write.csv(data_export_2, file = file_name_2, row.names = FALSE)
