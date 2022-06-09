@@ -147,25 +147,7 @@ for s = 1:size(track_data,2)
 end
 
 
-%% Get Latency Vector that Shows Beginnings of Trials 
-% (Necessary cause Peaks are only given in Trial Latency)
-% # List of Trigger Meanings
-% # sort(unique(trig_list[[subj_ids[i]]][["trig_data"]][["Description"]]))
-% # "S 11": Start of Experiment
-% # "S 12": Fixation cross appears
-% # "S 13": Start of Trial (left)
-% # "S 14": Start of Trial (right)
-% # "S 16": Pause start
-% # "S 17": Pause end
-% # "S 20": Cursor Occlusion
-% # "S 21": Cursor Reappearance
-% # "S 23": Start Constant Trajectory
-% # "S 24": End Constant Trajectory
-% # "S 26": Start Start Vector
-% # "S 27": End Start Vector
-[all_data_struct(s).event.latency]
-{all_data_struct(s).event.type}
-
+%% Split EEG data in Trials (Necessary cause Peaks are only given in Trial Latency)
 
 % add latency of trials
 
