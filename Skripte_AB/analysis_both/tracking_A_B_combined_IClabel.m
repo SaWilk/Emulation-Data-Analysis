@@ -1,11 +1,12 @@
-% Data Analysis Pursuit-Occlusion Paradigm
+% Data Analysis Pursuit-Tracking and Pursuit-Occlusion Paradigm
 % Emulation pilot study 2021
 
-% Script B contains:
-% IC-label for extracting neural components
+% Script contains:
+% IC-label for extracting neural components based on combined data of task
+% A and B
 
 % Adriana Boettcher
-% 02.06.2022
+% 13.06.2022
 
 %% clear workspace
 clear;
@@ -19,21 +20,21 @@ eeglab;
 close;
 
 % set input path
-inputpath = "R:\AG-Beste-Studien\Emulation\06_analysis\output_analysis_task_B\01_preprocessed";
+inputpath = "R:\AG-Beste-Studien\Emulation\06_analysis\output_ICA_combined\01_ICA";
 cd(inputpath);
 
 % set export directory
-savepath = "R:\AG-Beste-Studien\Emulation\06_analysis\output_analysis_task_B\02_icaclean";  
+savepath = "R:\AG-Beste-Studien\Emulation\06_analysis\output_ICA_combined\02_IClabel";  
 
 %list all *.set files in inputpath
-filenames = dir('*epoched*.set');
+filenames = dir('*ICA_merged*.set');
 
 %concatenate into one cell array
 files2read = {filenames.name};
 
-%% loop through files generated with script A (preprocessed EEG data)
+%% loop through files with ICA components based on both data sets
 
-for ind = 25 %1:length(filenames)
+for ind = 1:length(filenames)
     
     % import the data file
     TMPEEG = pop_loadset('filename', files2read(ind), 'filepath', char(inputpath));
