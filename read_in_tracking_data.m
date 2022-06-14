@@ -163,8 +163,16 @@ end
 % # "S 24": End Constant Trajectory
 % # "S 26": Start Start Vector
 % # "S 27": End Start Vector
+
+% find trial start
+
+start_pattern = {["S 26","S 27"], ["S 26", "", "S 27"]}; % possible sequence of
+% start trials
+
+strfind(start_pattern{1}(1), char({all_data_struct(s).urevent.type}))
+% what is boundary? only sitmuli 
 [all_data_struct(s).event.latency]
-{all_data_struct(s).event.type}
+char({all_data_struct(s).event.type})
 
 
 % add latency of trials
