@@ -147,7 +147,7 @@ for s = 1:size(track_data,2)
 end
 
 
-%% Get Latency Vector that Shows Beginnings of Trials 
+%% Get Latency Vector that Shows Beginnings of Trials
 % (Necessary cause Peaks are only given in Trial Latency)
 % # List of Trigger Meanings
 % # sort(unique(trig_list[[subj_ids[i]]][["trig_data"]][["Description"]]))
@@ -163,17 +163,104 @@ end
 % # "S 24": End Constant Trajectory
 % # "S 26": Start Start Vector
 % # "S 27": End Start Vector
+% custom: "S 15": End Trial
 
-% find trial start
 
-start_pattern = {["S 26","S 27"], ["S 26", "", "S 27"]}; % possible sequence of
-% start trials
 
-strfind(start_pattern{1}(1), char({all_data_struct(s).urevent.type}))
-% what is boundary? only sitmuli 
-[all_data_struct(s).event.latency]
-char({all_data_struct(s).event.type})
+for s = 1:size(all_data_struct,2)
 
+    % copy urevent field to other field
+    all_data_struct(s).track_event = all_data_struct(s).urevent;
+    % copy event field to convenient format
+    event = all_data_struct(s).track_event;
+    % delete all triggers before S11
+    event = event(find(strcmp({event.type}, "S 11")):end);
+    % copy event types column to convenient format
+
+    % insert end trial triggers
+
+    first_12 = true;
+    last_trigger = "none";
+    % loop through elements of event_types.
+    i = 0;
+    while i < length({event.type})
+    i = i + 1;
+        % if an event type is either 16 or 12...
+        if (strcmp(event(i).type, "S 16") | strcmp(event(i).type, "S 12"))
+            % make sure the first entry is skipped (since the first fix cross
+            % is not a trial end)
+
+            if first_12 
+                first_12 = false;
+                continue
+            end
+
+            % and exclude the first 12 after a pause, cause it's also not a
+            % trial end.
+            if strcmp(last_trigger, "S 16") 
+                last_trigger = "none";
+                continue
+            end
+%             disp(strcat("is true for ", num2str(i)))
+%             disp(strcat("following event", event(i+1).type))
+% save current trigger for next loop iteration
+            last_trigger = event(i).type;
+            % copy the row in question
+            event = [event(1:i-1), event(i), event(i:end)];
+            % replace the copied rows' type with S 15
+            event(i).type = 'S 15';
+            event(i).code = 'inserted';
+            % increment i additionally because we just inserted a trigger
+            i = i + 1;
+        end
+        
+    end
+    % add an end trial trigger to very end of trigger list
+    event = [event, event(end)];
+    event(end).type = 'S 15';
+    event(end).code = 'inserted';
+    % copy the new event_types struct into track event
+    all_data_struct(s).track_event = event;
+
+    % start trial indices
+    % get the indices of the "S 27    " in urevent.type
+    trial_start_ind = strcmp({event.type}, "S 27");
+    trial_starts = find(trial_start_ind);
+  
+    % end trial indices
+    % get the indices of the "S 15    " in urevent.type
+    trial_end_ind = strcmp({event.type}, "S 15");
+    trial_ends = find(trial_end_ind);
+
+    latencies = [event.latency];
+
+        % add new field: trial_latency
+    tmp = num2cell(latencies);
+    % todo here: latencies set to 0 at beginnings of trials so I can use
+    % the findpeaks function to get the right timing 
+    % probably requires a loop. 
+
+    % this syntax is confusing as hell. left hand side of the assignment needs
+    % to be a vector, right hand side single outputs and matlab is happy...
+    [all_data_struct(s).track_event.trial_latency] = tmp{:};
+
+    % update event 
+    event = all_data_struct(s).track_event;
+
+    for idx = 1:length(trial_starts)
+        % set latencies 
+        subtracted =  num2cell([event(trial_starts(idx):trial_ends(idx)).trial_latency] - ...
+        event(trial_starts(idx)).trial_latency);
+    [event(trial_starts(idx):trial_ends(idx)).trial_latency] = subtracted{:};
+    end
+
+    all_data_struct(s).track_event = event;
+    disp(length(event_types(trial_start_ind)));
+    disp(length(latencies(trial_start_ind)));
+
+end
+
+% Notes: 91L3HA is excluded because recording started too late. 
 
 % add latency of trials
 
@@ -195,10 +282,18 @@ char({all_data_struct(s).event.type})
 
 %% Find Peaks of Tracking Data and put them in Events
 
+% "S 30": Peak
 
-[~, index_max_traj] = findpeaks(track_data(s).upsamp_trials(.traj
+[~, index_max_traj] = findpeaks(track_data(s).upsamp_trials)
 % 1.1.2. target trajectory minima
 [~, index_min_traj] = findpeaks(-track_data.task_a.(field_names{s}).(trial_name{t})(:,2));
+
+% insert the peak event markers at position in question
+% copy the row in question
+event = [event(1:i-1), event(i), event(i:end)];
+% replace the copied rows' type with S 15
+event(i).type = "S 15";
+event(i).code = "inserted"
 
 plot(track_data.task_a.(field_names{s}).(trial_name{t})(:,1), track_data.task_a.(field_names{s}).(trial_name{t})(:,2))
 
