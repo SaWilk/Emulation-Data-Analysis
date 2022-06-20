@@ -6,3 +6,5 @@
 *.set
 /Skripte_AB/analysis_task_b/EEG_processed_taskB
 00_npz_files/
+*.fdt
+*.fdt
