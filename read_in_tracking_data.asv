@@ -70,7 +70,7 @@ warning("on","all");
 
 
 %% playground
-%
+% 
 % vec_x = [1, 1.5, 1.75]%, 2.1, 2.4, 3, 3.1]; % 7 points
 % diff(vec_x)
 % vec_y = [0, 7, 8]% 5.5, 2, -4, 0];
@@ -107,22 +107,22 @@ for s = 1:length(subj_ids)
         inter_traj_y = spline(time_vec, tmp_traj_y, inter_time_vec);
 
         % proof that it works well:
-        %         figure
-        %         plot(no_points, inter_traj_y, 'ob')
-        %         hold on
-        %         plot(time_vec, tmp_traj_y, '.r')
-        %         hold off
-        % same for pursuit
+%         figure
+%         plot(no_points, inter_traj_y, 'ob')
+%         hold on
+%         plot(time_vec, tmp_traj_y, '.r')
+%         hold off
+% same for pursuit
         tmp_purs_y = track_data(s).trials(t).purs_y;
         inter_purs_y = spline(time_vec, tmp_purs_y, inter_time_vec);
-        % note that x axis points are milliseconds now.
+        % note that x axis points are milliseconds now. 
 
         % proof that it works well:
-        %         figure
-        %         plot(tmp_purs_x, tmp_purs_y, 'ob')
-        %         hold on
-        %         plot(no_points, inter_purs_y, '.r')
-        %         hold off
+%         figure
+%         plot(tmp_purs_x, tmp_purs_y, 'ob')
+%         hold on
+%         plot(no_points, inter_purs_y, '.r')
+%         hold off
 
         % for now, I am just deleting the error columns
         % TODO: adjust or re-calculate error in Matlab
@@ -184,7 +184,7 @@ end
 % # "S 26": Start Start Vector
 % # "S 27": End Start Vector
 % custom: "S 15": End Trial
-% custom: "S 30": Peak
+
 
 
 for s = 1:size(all_data_struct,2)
@@ -204,26 +204,26 @@ for s = 1:size(all_data_struct,2)
     % loop through elements of event_types.
     i = 0;
     while i < length({event.type})
-        i = i + 1;
+    i = i + 1;
         % if an event type is either 16 or 12...
         if (strcmp(event(i).type, "S 16") | strcmp(event(i).type, "S 12"))
             % make sure the first entry is skipped (since the first fix cross
             % is not a trial end)
 
-            if first_12
+            if first_12 
                 first_12 = false;
                 continue
             end
 
             % and exclude the first 12 after a pause, cause it's also not a
             % trial end.
-            if strcmp(last_trigger, "S 16")
+            if strcmp(last_trigger, "S 16") 
                 last_trigger = "none";
                 continue
             end
-            %             disp(strcat("is true for ", num2str(i)))
-            %             disp(strcat("following event", event(i+1).type))
-            % save current trigger for next loop iteration
+%             disp(strcat("is true for ", num2str(i)))
+%             disp(strcat("following event", event(i+1).type))
+% save current trigger for next loop iteration
             last_trigger = event(i).type;
             % copy the row in question
             event = [event(1:i-1), event(i), event(i:end)];
@@ -233,7 +233,7 @@ for s = 1:size(all_data_struct,2)
             % increment i additionally because we just inserted a trigger
             i = i + 1;
         end
-
+        
     end
     % add an end trial trigger to very end of trigger list
     event = [event, event(end)];
@@ -246,7 +246,7 @@ for s = 1:size(all_data_struct,2)
     % get the indices of the "S 27" in event.type
     trial_start_ind = strcmp({event.type}, "S 27");
     trial_starts = find(trial_start_ind);
-
+  
     % end trial indices
     % get the indices of the "S 15" in event.type
     trial_end_ind = strcmp({event.type}, "S 15");
@@ -254,32 +254,32 @@ for s = 1:size(all_data_struct,2)
 
     latencies = [event.latency];
 
-    % add new field: trial_latency
+        % add new field: trial_latency
     tmp = num2cell(latencies);
     % todo here: latencies set to 0 at beginnings of trials so I can use
-    % the findpeaks function to get the right timing
-    % probably requires a loop.
+    % the findpeaks function to get the right timing 
+    % probably requires a loop. 
 
     % this syntax is confusing as hell. left hand side of the assignment needs
     % to be a vector, right hand side single outputs and matlab is happy...
     [all_data_struct(s).track_event.trial_latency] = tmp{:};
 
-    % update event
+    % update event 
     event = all_data_struct(s).track_event;
 
 
     for idx = 1:length(trial_starts)
-        % set latencies
+        % set latencies 
         subtracted =  num2cell([event(trial_starts(idx):trial_ends(idx)).trial_latency] - ...
-            event(trial_starts(idx)).trial_latency);
-        [event(trial_starts(idx):trial_ends(idx)).trial_latency] = subtracted{:};
+        event(trial_starts(idx)).trial_latency);
+    [event(trial_starts(idx):trial_ends(idx)).trial_latency] = subtracted{:};
     end
 
     all_data_struct(s).track_event = event;
 
 end
 
-% Notes: 91L3HA is excluded because recording started too late.
+% Notes: 91L3HA is excluded because recording started too late. 
 
 % add latency of trials
 
@@ -377,21 +377,20 @@ end
 s = 2; % pick subject
 trials = 1:10;
 
-figure()
+    figure()
 for t = trials
     trial_starts = find(strcmp({all_data_struct(s).track_event_peaks.type}, "S 27"));
     trial_ends = find(strcmp({all_data_struct(s).track_event_peaks.type}, "S 15"));
     trial_x_only = all_data_struct(s).track_event_peaks(trial_starts(t):trial_ends(t));
     peaks_only = find(strcmp({trial_x_only.type}, "S 30"));
-    peak_latencies = [trial_x_only(peaks_only).trial_latency];
     const_only = find(strcmp({trial_x_only.type}, "S 23"));
     const_latencies = [trial_x_only(const_only).trial_latency];
     const_only_end = find(strcmp({trial_x_only.type}, "S 24"));
     const_latencies_end = [trial_x_only(const_only_end).trial_latency];
-    end_trial_only = find(strcmp({trial_x_only.type}, "S 15"));
-    trial_latencies_end = [trial_x_only(end_trial_only).trial_latency];
-    start_trial_only = find(strcmp({trial_x_only.type}, "S 27"));
-    trial_latencies_start = [trial_x_only(start_trial_only).trial_latency];
+        const_only_end = find(strcmp({trial_x_only.type}, "S 24"));
+    const_latencies_end = [trial_x_only(const_only_end).trial_latency];
+
+    peak_latencies = [trial_x_only(peaks_only).trial_latency];
     traj_y = all_data_struct(s).upsamp_trials(t).traj_y;
     traj_x_temp = 1:length(traj_y);
 
@@ -404,9 +403,8 @@ for t = trials
     peak_handle = xline(peak_latencies,"linewidth", 1.5);
     const_handle = xline(const_latencies, "r", "linewidth", 1.5);
     xline(const_latencies_end, "r", "linewidth", 1.5)
-    start_handle = xline(trial_latencies_start, "g", "linewidth", 1.5);
     hold off
-    legend([peak_handle(1), const_handle, start_handle], {"peaks", "const", "trial"});
+    legend([peak_handle(1), const_handle], {"peaks", "const"});
 
 end
 
