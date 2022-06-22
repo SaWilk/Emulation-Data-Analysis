@@ -11,6 +11,10 @@
 % Adriana Böttcher
 % 08.06.22
 
+% updated by AB 15/06/22:
+% ICA based on 1/4 of the trials, do not save old components but only the
+% ones extracted from merged data
+
 %% clear workspace
 clear;
 clc;
@@ -63,7 +67,7 @@ for ind = 1:length(filenames_A)
     TMPEEG = pop_mergeset(TMPEEG_A, TMPEEG_B, 1);
 
     % save sbj ID for merged set
-    filename = TMPEEG.filename(1:6);
+    filename = TMPEEG.filename(1:5);
 
     %% prepare data for ICA (to exclude occular artifacts)
     
@@ -73,7 +77,8 @@ for ind = 1:length(filenames_A)
     ICA = TMPEEG;
 
     %detrend eeg data
-    ICA = eeg_detrend(ICA); %code copied from https://github.com/widmann/erptools/blob/master/eeg_detrend.m
+    ICA = eeg_detrend(ICA); 
+    %code copied from https://github.com/widmann/erptools/blob/master/eeg_detrend.m
 
     %artifact rejection
     ICA = pop_jointprob(ICA, 1, 1:ICA.nbchan, 5, 5, 0, 1);
@@ -81,7 +86,7 @@ for ind = 1:length(filenames_A)
     %select only some random trials
     trl = 1:ICA.trials;
     trl = shuffle(trl);
-    ICA = pop_select(ICA, 'trial', trl(1:round(length(trl)/2))) ;
+    ICA = pop_select(ICA, 'trial', trl(1:round(length(trl)/4))) ;
     
     %prepare data for ICA 
     x = double(ICA.data);
@@ -95,17 +100,13 @@ for ind = 1:length(filenames_A)
     % now run ICA
     % extended infomax due to higher efficiency
     ICA = pop_runica(ICA, 'icatype', 'runica', 'extended',1, 'pca',rnk);
-    TMPEEG.icaweights_merged = ICA.icaweights;
-    TMPEEG.icasphere_merged = ICA.icasphere;
-    TMPEEG.icawinv_merged = ICA.icawinv; 
-    TMPEEG.icachansind_merged = ICA.icachansind;
-    TMPEEG = eeg_checkset(TMPEEG);
+    TMPEEG.icaweights   = ICA.icaweights;
+    TMPEEG.icasphere    = ICA.icasphere;
+    TMPEEG.icawinv      = ICA.icawinv; 
+    TMPEEG.icachansind  = ICA.icachansind;
+
+    TMPEEG              = eeg_checkset(TMPEEG);
 
     %save new data
-    TMPEEG = pop_saveset(TMPEEG,'filename',[filename '_epoched_ICA_merged'], 'filepath', char(savepath));
+    TMPEEG = pop_saveset(TMPEEG,'filename',[filename '_epoched_ICA_merged_new'], 'filepath', char(savepath));
 end
-
-
-
-
-

@@ -5,8 +5,11 @@
 % IC-label for extracting neural components based on combined data of task
 % A and B
 
+%new: singletask components are not saved anymore
+% excluded components are saved
+
 % Adriana Boettcher
-% 13.06.2022
+% 16.06.2022
 
 %% clear workspace
 clear;
@@ -27,7 +30,7 @@ cd(inputpath);
 savepath = "R:\AG-Beste-Studien\Emulation\06_analysis\output_ICA_combined\02_IClabel";  
 
 %list all *.set files in inputpath
-filenames = dir('*ICA_merged*.set');
+filenames = dir('*ICA_merged_new*.set');
 
 %concatenate into one cell array
 files2read = {filenames.name};
@@ -41,16 +44,6 @@ for ind = 1:length(filenames)
     
     %get the file name for saving later
     filename = TMPEEG.filename(1:end-4);
-
-    % save copy of old components extracted based on single task
-    TMPEEG.icawinv_singletask = TMPEEG.icawinv;
-    TMPEEG.icasphere_singletask = TMPEEG.icasphere;
-    TMPEEG.icaweights_singletask = TMPEEG.icaweights;
-
-    % save new components based on both tasks with standard variable names
-    TMPEEG.icawinv = TMPEEG.icawinv_merged;
-    TMPEEG.icasphere = TMPEEG.icasphere_merged;
-    TMPEEG.icaweights = TMPEEG.icaweights_merged;
 
     %run IClabel to classify components
     TMPEEG = iclabel(TMPEEG);
