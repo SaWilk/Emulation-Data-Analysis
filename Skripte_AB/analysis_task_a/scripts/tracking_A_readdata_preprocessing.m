@@ -55,11 +55,11 @@ for ind = 1:length(filenames)
     %import raw data from brainvision
     TMPEEG = pop_loadbv(rawdata_dir, files2read{ind});
     
-    %apply add_occl_events --> create OCCL var in EEG.event (coding
-    %occlusion  = on/off/none
+    %apply add_traj_events --> create TRAJ var in EEG.event (coding
+    %traj = rand1/const/rand2
     TMPEEG = add_traj_events(TMPEEG);
     
-    %remove all events for OCCL = "none" --> occlusion events are the only
+    %remove all events for TRAJ = "none" --> occlusion events are the only
     %that remain
     TMPEEG = rm_traj_none(TMPEEG);    
 
