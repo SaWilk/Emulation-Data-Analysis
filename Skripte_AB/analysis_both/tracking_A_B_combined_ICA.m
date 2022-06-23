@@ -15,6 +15,9 @@
 % ICA based on 1/4 of the trials, do not save old components but only the
 % ones extracted from merged data
 
+%updated AB 22/06/22
+%new paths
+
 %% clear workspace
 clear;
 clc;
@@ -28,17 +31,17 @@ eeglab;
 close;
 
 % set input path
-inputpath_B = "R:\AG-Beste-Studien\Emulation\06_analysis\output_analysis_task_B\01_preprocessed";
-inputpath_A = "R:\AG-Beste-Studien\Emulation\06_analysis\output_analysis_task_A\01_preprocessed";
+inputpath_B = "R:\AG-Beste-Studien\Emulation\06_analysis\output_analysis_task_B_new\01_preprocessed";
+inputpath_A = "R:\AG-Beste-Studien\Emulation\06_analysis\output_analysis_task_A_new\01_preprocessed";
 
 % set export directory
-savepath = "R:\AG-Beste-Studien\Emulation\06_analysis\output_ICA_combined\01_ICA";  
+savepath = "R:\AG-Beste-Studien\Emulation\06_analysis\output_ICA_combined_new\01_ICA";  
 
 %list all *.set files in inputpath
 cd(inputpath_A);
-filenames_A = dir('*epoched*.set');
+filenames_A = dir('*preprocessed*.set');
 cd(inputpath_B);
-filenames_B = dir('*epoched*.set');
+filenames_B = dir('*preprocessed*.set');
 
 %concatenate into one cell array
 files2read_A = {filenames_A.name};
@@ -72,9 +75,9 @@ for ind = 1:length(filenames_A)
     %% prepare data for ICA (to exclude occular artifacts)
     
     %prepare ICA via data subset
-%    ICA = eeg_regepochs(TMPEEG);
-    
-    ICA = TMPEEG;
+
+    %create epochs
+    ICA = eeg_regepochs(TMPEEG);
 
     %detrend eeg data
     ICA = eeg_detrend(ICA); 
@@ -108,5 +111,5 @@ for ind = 1:length(filenames_A)
     TMPEEG              = eeg_checkset(TMPEEG);
 
     %save new data
-    TMPEEG = pop_saveset(TMPEEG,'filename',[filename '_epoched_ICA_merged_new'], 'filepath', char(savepath));
+    TMPEEG = pop_saveset(TMPEEG,'filename',[filename '_ICA_merged_new'], 'filepath', char(savepath));
 end
