@@ -137,7 +137,7 @@ for s = 1:length(subj_ids)
             tmp_mat = [inter_time_vec; inter_traj_y; inter_purs_y].';
 
             for c = 1:size(tmp_mat, 2)
-                track_data(s).("upsamp_trials").(task_names{task})(t).(col_names{c}) = tmp_mat(:,c);
+                track_data(s).("upsamp_data").(task_names{task})(t).(col_names{c}) = tmp_mat(:,c);
             end
 
         end
@@ -161,7 +161,9 @@ files2read = {dir('*.set').name};
 % Was for separating a and b task files.
 % files2read_a = files2read(~cellfun(@isempty, regexp(files2read,'_A_')));
 
-eeg_struct = pop_loadset('filename',files2read);
+EEG = pop_loadset('filename',files2read);
+[ALLEEG, EEG, CURRENTSET] = eeg_store( ALLEEG, EEG, 0 );
+eeg_struct = ALLEEG;
 
 
 %% Put Tracking and EEG Data in the same structure
@@ -179,21 +181,24 @@ for s = 1:length(all_data_struct)
         repmat({all_data_struct(s).subject}, size({track_data.subject}))));
 
 end
+% keep only subjects with eeg and tracking data
 copy_data = track_data(tmp_idx);
 
-field_names = fieldnames(copy_data);
-% nope, it does not seem to be possible to concatenate structures
-% without a loop
-for s = 1:size(copy_data,2)
-    if strcmp(copy_data(s).subject, all_data_struct(s).subject)
-        for f = 1:length(field_names)
-            % put tracking data in all data struct
-            all_data_struct(s).(field_names{f}) = copy_data(s).(field_names{f});
-        end
-    else
-        disp(strcat(all_data_struct(s).subject, " has no matching tracking data"));
-    end
-end
+
+% Deprecated: Put tracking and eeg data in same strucure
+% field_names = fieldnames(copy_data);
+% % nope, it does not seem to be possible to concatenate structures
+% % without a loop
+% for s = 1:size(copy_data,2)
+%     if strcmp(copy_data(s).subject, all_data_struct(s).subject)
+%         for f = 1:length(field_names)
+%             % put tracking data in all data struct
+%             all_data_struct(s).(field_names{f}) = copy_data(s).(field_names{f});
+%         end
+%     else
+%         disp(strcat(all_data_struct(s).subject, " has no matching tracking data"));
+%     end
+% end
 
 
 %% Get Latency Vector that Shows Beginnings of Trials
@@ -222,12 +227,12 @@ end
 % custom: "S 15": End Trial
 % custom: "S 40": Peak
 
-for s = 1:size(all_data_struct,2)
+for s = 1:size(eeg_struct,2)
 
     % copy urevent field to other field
-    all_data_struct(s).track_event = all_data_struct(s).urevent;
+    eeg_struct(s).track_event = eeg_struct(s).urevent;
     % copy event field to convenient format
-    event = all_data_struct(s).track_event;
+    event = eeg_struct(s).track_event;
     % sanity check of triggers - are we DEALING WITH TASK A EVEN???
     % TODO: Alter check once pipeline is adjusted for Task B as well.
     event_cat = categorical({event.type});
@@ -238,12 +243,12 @@ for s = 1:size(all_data_struct,2)
     % is this task c?
     if any(strcmp({event.type}, repmat("S 30",size({event.type},1), size({event.type},2) ))) | ...
             any(strcmp({event.type}, repmat("S 28",size({event.type},1), size({event.type},2) )))
-        warning(strcat(['Caution! Subject', all_data_struct(s).subject, 'seems to be a task C trigger file. Skipping']));
+        warning(strcat(['Caution! Subject', eeg_struct(s).subject, 'seems to be a task C trigger file. Skipping']));
         continue
         % if it is not, is this task b?
         %     elseif any(strcmp({event.type}, repmat("S 20",size({event.type},1), size({event.type},2) ))) | ...
         %            any(strcmp({event.type}, repmat("S 21",size({event.type},1), size({event.type},2) )))
-        %         warning(strcat(['Caution! Subject', all_data_struct(s).subject, ' seems to be a task B trigger file. Skipping']));
+        %         warning(strcat(['Caution! Subject', eeg_struct(s).subject, ' seems to be a task B trigger file. Skipping']));
         %         continue
     end
 
@@ -300,7 +305,7 @@ for s = 1:size(all_data_struct,2)
     event(start_exp(2)-1).type = 'S 15';
     event(start_exp(2)-1).code = 'inserted';
     % copy the new event_types struct into track event
-    all_data_struct(s).track_event = event;
+    eeg_struct(s).track_event = event;
 
     % start trial indices
     % get the indices of the "S 27" in event.type
@@ -322,10 +327,10 @@ for s = 1:size(all_data_struct,2)
 
     % this syntax is confusing as hell. left hand side of the assignment needs
     % to be a vector, right hand side single outputs and matlab is happy...
-    [all_data_struct(s).track_event.trial_latency] = tmp{:};
+    [eeg_struct(s).track_event.trial_latency] = tmp{:};
 
     % update event
-    event = all_data_struct(s).track_event;
+    event = eeg_struct(s).track_event;
 
     if length(trial_starts) == length(trial_ends)
         for idx = 1:length(trial_starts)
@@ -335,12 +340,12 @@ for s = 1:size(all_data_struct,2)
             [event(trial_starts(idx):trial_ends(idx)).trial_latency] = subtracted{:};
         end
     else
-        warning(strcat(['Subject ', all_data_struct(s).subject, ...
+        warning(strcat(['Subject ', eeg_struct(s).subject, ...
             ' has an unequal number of trial start and trial end triggers!', ...
             ' No trial latencies will be computed. ']));
     end
 
-    all_data_struct(s).track_event = event;
+    eeg_struct(s).track_event = event;
 
 end
 
@@ -350,13 +355,13 @@ end
 % TODO: Warning: Subject ZV583 has an unequal number of trial start and trial end triggers! No trial latencies will be computed.
 
 
-%% Find Peaks of Tracking Data and put them in Events
+%% Find Peaks of Tracking Data and put them in Events'
 
 % "S 40": Peak
 
-for s = 1:size(all_data_struct,2)
+for s = 1:size(eeg_struct,2)
 
-    event = all_data_struct(s).track_event;
+    event = eeg_struct(s).track_event;
 
     for task = 1:2
         % get eeg triggers of current task
@@ -364,9 +369,9 @@ for s = 1:size(all_data_struct,2)
         exp_ind(1) = 1;
         event_cur_task = event(exp_ind(task):exp_ind(task+1));
 
-        for t = 1:size(all_data_struct(s).upsamp_trials.(task_names{task}),2)
+        for t = 1:size(copy_data(s).upsamp_data.(task_names{task}),2)
 
-            current_trial_traj = all_data_struct(s).upsamp_trials.(task_names{task})(t).traj_y;
+            current_trial_traj = copy_data(s).upsamp_data.(task_names{task})(t).traj_y;
 
             % get peak indices within trial trajectory data
             [~, index_max_traj] = findpeaks(current_trial_traj);
@@ -377,9 +382,9 @@ for s = 1:size(all_data_struct,2)
             % locate trial ends in eeg event
             trial_ends = find(strcmp({event_cur_task.type}, "S 15"));
 
-            % 
+            %
             if length(trial_starts) ~= length(trial_ends)
-                warning(strcat(['Subject ', all_data_struct(s).subject, ...
+                warning(strcat(['Subject ', eeg_struct(s).subject, ...
                     ' does not have an equal number of start and end trial ' ...
                     'triggers in ', char(task_names{task}), '. Skipping.']))
                 break
@@ -414,7 +419,7 @@ for s = 1:size(all_data_struct,2)
             end
         end
         % copy the event structure into a new field in all_data_struct
-        all_data_struct(s).("track_event_peaks").(task_names{task}) =  event_cur_task;
+        eeg_struct(s).("track_event_peaks").(task_names{task}) =  event_cur_task;
     end
 
 end
@@ -433,7 +438,28 @@ end
 % min_traj_coords = [trialdata.traj_x_pix(index_min_traj), trialdata.traj_y_pix(index_min_traj)];
 
 
+%% Remove historical fields; can be commented out here easily for re-tracing changes
+
+% tmp_struct = eeg_struct;
+% tmp_struct = all_data_struct;
+% tmp_struct.upsamp_data > 1
+% fieldnames(all_data_struct)
+%
+% for s = 1:size(tmp_struct, 2)
+%
+%     tmp_struct(s).etc.("upsamp_data") = tmp_struct(s).upsamp_data;
+% end
+%     tmp_struct(s).event = tmp_struct(s).track_event_peaks;
+%
+% end
+% tmp_struct = rmfield(tmp_struct, ["path", "track_event", "track_event_peaks", "upsamp_data"]);
+% tmp_struct = rmfield(tmp_struct, ["path", "upsamp_data"]);
+%
+% isequal(fieldnames(ALLEEG), fieldnames(tmp_struct))
+
+
 %% Replace Constant Traj Trigger from .vmrk with calculated from .npz
+
 %align constant trajectories of several trials
 %compare constant trajectory and trial trajectory at every point
 %calculate variance of difference
@@ -448,18 +474,22 @@ end
 %% save sets
 
 
-% This does not work... :( 
-% go over this 
+% This does not work... :(
+% go over this
 % https://eeglab.org/tutorials/ConceptsGuide/Data_Structures.html
 
-out_path = strcat([file_path, '\01_merged_data']);
-file_name_suffix = '_EEG_and_tracking';
+out_path = strcat([file_path, '\01_merged_data\']);
+EEG_file_name_suffix = '_EEG';
+track_file_name_suffix = 'all_tracking_data.mat';
 
-for s = 1:size(all_data_struct, 2)
+for s = 1:size(copy_data, 2)
 
-    file_name = strcat([all_data_struct(s).subject, file_name_suffix])
-    TMPEEG = all_data_struct(s);
-    TMPEEG = pop_saveset(TMPEEG, 'filename', file_name, 'filepath', out_path);
+    file_name = strcat([eeg_struct(s).subject, EEG_file_name_suffix])
+    pop_saveset(eeg_struct(s), 'filename', file_name, 'filepath', out_path);
+    file_name = strcat([out_path, copy_data(s).subject, track_file_name_suffix]);
+
 
 end
+file_name = strcat([out_path, track_file_name_suffix]);
+save(file_name, 'copy_data');
 
