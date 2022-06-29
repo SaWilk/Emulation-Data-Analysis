@@ -331,18 +331,37 @@ for s = 1:size(eeg_struct,2)
 
     % update event
     event = eeg_struct(s).track_event;
+    % initialize trial number field
+    tmp = num2cell(repmat(9999, size(eeg_struct(s).track_event)));
+    [event.("trial_number")] = tmp{:};
 
     if length(trial_starts) == length(trial_ends)
+        % loop through trial start indices
         for idx = 1:length(trial_starts)
-            % set latencies
-            subtracted =  num2cell([event(trial_starts(idx):trial_ends(idx)).trial_latency] - ...
-                event(trial_starts(idx)).trial_latency);
-            [event(trial_starts(idx):trial_ends(idx)).trial_latency] = subtracted{:};
+            % set per trial latencies of events in trial
+            trial_event_latencies = [event(trial_starts(idx):trial_ends(idx)).trial_latency] - ...
+                event(trial_starts(idx)).trial_latency;
+            trial_event_latencies_cell =  num2cell(trial_event_latencies);
+            [event(trial_starts(idx):trial_ends(idx)).trial_latency] = trial_event_latencies_cell{:};
+            % add field: trial number
+            if idx <= 72
+            trial_num = idx;
+            elseif 72 < idx <= 72*2
+                trial_num = idx - 72;
+            else
+                trial_num = idx - 72*2;
+            end
+            trial_idx = num2cell(repmat(trial_num, size(trial_event_latencies_cell)));
+            [event(trial_starts(idx):trial_ends(idx)).("trial_number")] = trial_idx{:};
+            % add field: trial latency ms
+            trial_event_latencies_ms = num2cell(trial_event_latencies/250*1000);
+            [event(trial_starts(idx):trial_ends(idx)).("trial_latency_ms")] = trial_event_latencies_ms{:};
         end
     else
         warning(strcat(['Subject ', eeg_struct(s).subject, ...
             ' has an unequal number of trial start and trial end triggers!', ...
             ' No trial latencies will be computed. ']));
+        NOLATENCIES = eeg_struct(s).subject;
     end
 
     eeg_struct(s).track_event = event;
@@ -355,73 +374,83 @@ end
 % TODO: Warning: Subject ZV583 has an unequal number of trial start and trial end triggers! No trial latencies will be computed.
 
 
-%% Find Peaks of Tracking Data and put them in Events'
+%% Find Peaks of Tracking Data and put them in Events
 
 % "S 40": Peak
 
 for s = 1:size(eeg_struct,2)
 
     event = eeg_struct(s).track_event;
+    if ~strcmp(NOLATENCIES, eeg_struct(s).subject)
+        for task = 1:2
+            % get eeg triggers of current task
+            exp_ind = [find(strcmp({event.code}, "New Segment"))-1, length({event.type})];
+            exp_ind(1) = 1;
+            % add field to events: task
+            task_labels = cellstr(repmat(task_names{task}, [1, length(exp_ind(task):exp_ind(task+1))]));
+            [event(exp_ind(task):exp_ind(task+1)).("task")] = task_labels{:};
+            event_cur_task = event(find(strcmp({event.task}, task_names{task})));
 
-    for task = 1:2
-        % get eeg triggers of current task
-        exp_ind = [find(strcmp({event.code}, "New Segment"))-1, length({event.type})];
-        exp_ind(1) = 1;
-        event_cur_task = event(exp_ind(task):exp_ind(task+1));
+            for t = 1:size(copy_data(s).upsamp_data.(task_names{task}),2)
 
-        for t = 1:size(copy_data(s).upsamp_data.(task_names{task}),2)
+                current_trial_traj = copy_data(s).upsamp_data.(task_names{task})(t).traj_y;
 
-            current_trial_traj = copy_data(s).upsamp_data.(task_names{task})(t).traj_y;
+                % get peak indices within trial trajectory data
+                [~, index_max_traj] = findpeaks(current_trial_traj);
+                [~, index_min_traj] = findpeaks(-current_trial_traj);
 
-            % get peak indices within trial trajectory data
-            [~, index_max_traj] = findpeaks(current_trial_traj);
-            [~, index_min_traj] = findpeaks(-current_trial_traj);
+                % locate current trial in eeg event
+                cur_trial_idx = find([event_cur_task.trial_number] == t);
 
-            % locate trial starts in eeg event until next S 11
-            trial_starts = find(strcmp({event_cur_task.type}, "S 27"));
-            % locate trial ends in eeg event
-            trial_ends = find(strcmp({event_cur_task.type}, "S 15"));
+                %
+                %             if length(trial_starts) ~= length(trial_ends)
+                %                 warning(strcat(['Subject ', eeg_struct(s).subject, ...
+                %                     ' does not have an equal number of start and end trial ' ...
+                %                     'triggers in ', char(task_names{task}), '. Skipping.']))
+                %                 break
+                %             end
 
-            %
-            if length(trial_starts) ~= length(trial_ends)
-                warning(strcat(['Subject ', eeg_struct(s).subject, ...
-                    ' does not have an equal number of start and end trial ' ...
-                    'triggers in ', char(task_names{task}), '. Skipping.']))
-                break
+                % get the latencies of the current trial in the eeg data
+                current_start_latency = event_cur_task(cur_trial_idx(1)).latency;
+                current_end_latency = event_cur_task(cur_trial_idx(end)).latency;
+                % add current start latency to the indicies of the peaks (which are in the same sampling rate
+                % as the eeg signal due to upsampling)
+                current_trial_peak_latencies = sort([index_max_traj; index_min_traj]);
+                current_peak_latencies = current_start_latency + current_trial_peak_latencies;
+
+                % for each of the current peak latencies...
+                for idx = 1:length(current_peak_latencies)
+
+                    % find the event that is one event before the peak
+                    % (which is the largest negative latency)
+                    tmp = [[event_cur_task.latency] - current_peak_latencies(idx)];
+                    current_event_idx = max(find(tmp <= 0 ));
+
+                    % insert the peak event markers at position in question
+                    % (copy event before it and adjust its values)
+                    event_cur_task = [event_cur_task(1:current_event_idx-1), ...
+                        event_cur_task(current_event_idx), event_cur_task(current_event_idx:end)];
+                    % replace the copied rows' type with S 40, making sure the
+                    % second event is overwritten
+                    event_cur_task(current_event_idx+1).type = 'S 40';
+                    event_cur_task(current_event_idx+1).code = 'inserted';
+                    event_cur_task(current_event_idx+1).latency = current_peak_latencies(idx);
+                    event_cur_task(current_event_idx+1).trial_latency = current_trial_peak_latencies(idx);
+                    event_cur_task(current_event_idx+1).trial_latency_ms = event_cur_task(current_event_idx+1).trial_latency/250*1000;
+                    event_cur_task(current_event_idx+1).trial_number = t;
+
+                end
             end
-
-            % get the latencies of the current trial in the eeg data
-            current_start_latency = event_cur_task(trial_starts(t)).latency;
-            current_end_latency = event_cur_task(trial_ends(t)).latency;
-            % add current start latency to the indicies of the peaks (which are in the same sampling rate
-            % as the eeg signal due to upsampling)
-            current_trial_peak_latencies = sort([index_max_traj; index_min_traj]);
-            current_peak_latencies = current_start_latency + current_trial_peak_latencies;
-
-            % for each of the current peak latencies...
-            for idx = 1:length(current_peak_latencies)
-
-                % find the event that is one event before the peak
-                % (which is the largest negative latency)
-                tmp = [[event_cur_task.latency] - current_peak_latencies(idx)];
-                current_event_idx = max(find(tmp <= 0 ));
-
-                % insert the peak event markers at position in question
-                % (copy event before it and adjust its values)
-                event_cur_task = [event_cur_task(1:current_event_idx-1), event_cur_task(current_event_idx), event_cur_task(current_event_idx:end)];
-                % replace the copied rows' type with S 40, making sure the
-                % second event is overwritten
-                event_cur_task(current_event_idx+1).type = 'S 40';
-                event_cur_task(current_event_idx+1).code = 'inserted';
-                event_cur_task(current_event_idx+1).latency = current_peak_latencies(idx);
-                event_cur_task(current_event_idx+1).trial_latency = current_trial_peak_latencies(idx);
-
-            end
+            % copy the event structure into a temporary field in eeg_struct
+            eeg_struct(s).(task_names{task}) =  event_cur_task;
         end
-        % copy the event structure into a new field in all_data_struct
-        eeg_struct(s).("track_event_peaks").(task_names{task}) =  event_cur_task;
+        % concatenate the two fields so eeglab can work with them
+        eeg_struct(s).track_event_peaks = [eeg_struct(s).(task_names{1}), eeg_struct(s).(task_names{2})];
+    else
+        warning(strcat(['Skipping subject ', eeg_struct(s).subject, ...
+            ' due to unequal number of trial start and trial end triggers!', ...
+            ' And therefore missing trial latencies. ']));
     end
-
 end
 %plot(copy_data.task_a.(field_names{s}).(trial_name{t})(:,1), copy_data.task_a.(field_names{s}).(trial_name{t})(:,2))
 
@@ -445,12 +474,12 @@ tmp_struct = eeg_struct;
 
 for s = 1:size(tmp_struct, 2)
 
-    tmp_struct(s).event = [tmp_struct(s).track_event_peaks.task_a, tmp_struct(s).track_event_peaks.task_b];
+    tmp_struct(s).event = tmp_struct(s).track_event_peaks;
 
 end
 tmp_struct = rmfield(tmp_struct, ["track_event", "track_event_peaks"]);
 
-isequal(fieldnames(ALLEEG), fieldnames(tmp_struct))
+% isequal(fieldnames(ALLEEG), fieldnames(tmp_struct))
 
 
 %% Replace Constant Traj Trigger from .vmrk with calculated from .npz
@@ -462,12 +491,10 @@ isequal(fieldnames(ALLEEG), fieldnames(tmp_struct))
 
 % [shift, start_ind, end_ind] = align_const_traj(const_traj, trial_traj);
 
+% TOOD: once you are done, tell Adriana
 
 
-
-
-%% save sets
-
+%% Save sets
 
 % This does not work... :(
 % go over this

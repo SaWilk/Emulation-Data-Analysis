@@ -55,11 +55,10 @@ time_vec = EEG.times;
 
 TMPEEG = pop_saveset(TMPEEG,'filename',[files2read{ind}(1:end-7) '_A_epoched'], 'filepath', char(savepath));
 
-chan_no = 2; % some channel 
-chan_lab = EEG.chanlocs(chan_no).labels;
-figure()
-plot(time_vec, mean_across_subj_erps(chan_no,:));
-title(strcat(['ERP of all subjects averaged across epochs around peaks, channel ', chan_lab]));
+EEG.chanlocs
+plot(time_vec, mean_across_subj_erps(2,:))
+title(strcat(['ERP of all subjects averaged across epochs around peaks, channel ', ]))
+
 
 
 

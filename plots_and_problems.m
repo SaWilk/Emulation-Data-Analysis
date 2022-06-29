@@ -26,3 +26,14 @@ hold off
 subplot(2,1,2)
 plot(tmp_traj(:,1), tmp_traj(:,2), "linewidth", 1.5)
 
+
+
+%% Test Plot Peaks Triggers
+
+
+s = 1
+t = 1
+task = 'task_a'
+
+plot_trigger_on_traj(ALLEEG, track_data, s, t, task)
+
