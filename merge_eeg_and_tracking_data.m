@@ -440,22 +440,17 @@ end
 
 %% Remove historical fields; can be commented out here easily for re-tracing changes
 
-% tmp_struct = eeg_struct;
-% tmp_struct = all_data_struct;
-% tmp_struct.upsamp_data > 1
-% fieldnames(all_data_struct)
-%
-% for s = 1:size(tmp_struct, 2)
-%
-%     tmp_struct(s).etc.("upsamp_data") = tmp_struct(s).upsamp_data;
-% end
-%     tmp_struct(s).event = tmp_struct(s).track_event_peaks;
-%
-% end
-% tmp_struct = rmfield(tmp_struct, ["path", "track_event", "track_event_peaks", "upsamp_data"]);
-% tmp_struct = rmfield(tmp_struct, ["path", "upsamp_data"]);
-%
-% isequal(fieldnames(ALLEEG), fieldnames(tmp_struct))
+tmp_struct = eeg_struct;
+
+
+for s = 1:size(tmp_struct, 2)
+
+    tmp_struct(s).event = [tmp_struct(s).track_event_peaks.task_a, tmp_struct(s).track_event_peaks.task_b];
+
+end
+tmp_struct = rmfield(tmp_struct, ["track_event", "track_event_peaks"]);
+
+isequal(fieldnames(ALLEEG), fieldnames(tmp_struct))
 
 
 %% Replace Constant Traj Trigger from .vmrk with calculated from .npz
@@ -484,8 +479,8 @@ track_file_name_suffix = 'all_tracking_data.mat';
 
 for s = 1:size(copy_data, 2)
 
-    file_name = strcat([eeg_struct(s).subject, EEG_file_name_suffix])
-    pop_saveset(eeg_struct(s), 'filename', file_name, 'filepath', out_path);
+    file_name = strcat([tmp_struct(s).subject, EEG_file_name_suffix])
+    pop_saveset(tmp_struct(s), 'filename', file_name, 'filepath', out_path);
     file_name = strcat([out_path, copy_data(s).subject, track_file_name_suffix]);
 
 
