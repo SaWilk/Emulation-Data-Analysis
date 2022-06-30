@@ -9,3 +9,7 @@
 *.fdt
 *.fdt
 *.mat
+*.daterpim
+*.daterp
+*.study
+*.fig

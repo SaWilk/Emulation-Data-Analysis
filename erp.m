@@ -53,7 +53,18 @@ end
 mean_across_subj_erps= mean(mean_erps,3);
 time_vec = EEG.times;
 
-TMPEEG = pop_saveset(TMPEEG,'filename',[files2read{ind}(1:end-7) '_A_epoched'], 'filepath', char(savepath));
+figure; 
+pop_plottopo(EEG, [1:60] , ''5STJS'', 0, ''ydir'',1);
+
+pop_topoplot(EEG, 1, [-500 748] ,'5STJS',[1 2] ,0,'electrodes','on')
+
+pop_erpplot()
+
+STUDY = std_erpplot(STUDY,ALLEEG)
+
+
+
+% TMPEEG = pop_saveset(TMPEEG,'filename',[files2read{ind}(1:end-7) '_A_epoched'], 'filepath', char(savepath));
 
 chan_no = 2; % some channel 
 chan_lab = EEG.chanlocs(chan_no).labels;
@@ -61,6 +72,10 @@ figure()
 plot(time_vec, mean_across_subj_erps(chan_no,:));
 title(strcat(['ERP of all subjects averaged across epochs around peaks, channel ', chan_lab]));
 
+
+figure()
+plot(time_vec, mean_across_subj_erps);
+title(strcat(['ERP of all subjects averaged across epochs around peaks, all channels']));
 
 
 

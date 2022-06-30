@@ -186,19 +186,19 @@ copy_data = track_data(tmp_idx);
 
 
 % Deprecated: Put tracking and eeg data in same strucure
-% field_names = fieldnames(copy_data);
-% % nope, it does not seem to be possible to concatenate structures
-% % without a loop
-% for s = 1:size(copy_data,2)
-%     if strcmp(copy_data(s).subject, all_data_struct(s).subject)
-%         for f = 1:length(field_names)
-%             % put tracking data in all data struct
-%             all_data_struct(s).(field_names{f}) = copy_data(s).(field_names{f});
-%         end
-%     else
-%         disp(strcat(all_data_struct(s).subject, " has no matching tracking data"));
-%     end
-% end
+field_names = fieldnames(copy_data);
+% nope, it does not seem to be possible to concatenate structures
+% without a loop
+for s = 1:size(copy_data,2)
+    if strcmp(copy_data(s).subject, all_data_struct(s).subject)
+        for f = 1:length(field_names)
+            % put tracking data in all data struct
+            all_data_struct(s).(field_names{f}) = copy_data(s).(field_names{f});
+        end
+    else
+        disp(strcat(all_data_struct(s).subject, " has no matching tracking data"));
+    end
+end
 
 
 %% Get Latency Vector that Shows Beginnings of Trials
@@ -469,8 +469,9 @@ end
 
 %% Remove historical fields; can be commented out here easily for re-tracing changes
 
-tmp_struct = eeg_struct;
+% tmp_struct = eeg_struct;
 
+tmp_struct = all_data_struct;
 
 for s = 1:size(tmp_struct, 2)
 
@@ -506,10 +507,8 @@ track_file_name_suffix = 'all_tracking_data.mat';
 
 for s = 1:size(copy_data, 2)
 
-    file_name = strcat([tmp_struct(s).subject, EEG_file_name_suffix])
+    file_name = strcat([tmp_struct(s).subject, EEG_file_name_suffix]);
     pop_saveset(tmp_struct(s), 'filename', file_name, 'filepath', out_path);
-    file_name = strcat([out_path, copy_data(s).subject, track_file_name_suffix]);
-
 
 end
 file_name = strcat([out_path, track_file_name_suffix]);
