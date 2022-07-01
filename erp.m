@@ -62,7 +62,7 @@ pop_erpplot()
 
 STUDY = std_erpplot(STUDY,ALLEEG)
 
-
+topoplot(mean_across_subj_erps(2,:), EEG.chanlocs)
 
 % TMPEEG = pop_saveset(TMPEEG,'filename',[files2read{ind}(1:end-7) '_A_epoched'], 'filepath', char(savepath));
 
