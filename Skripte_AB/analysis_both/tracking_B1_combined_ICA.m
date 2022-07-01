@@ -6,7 +6,7 @@
 % steps:
 % read preprocessed data for A and B
 % merge data sets
-% create new structure .ICA_combined and save merged data sets
+% create new structure ICA, run ICA and save merged datasets
 
 % Adriana Böttcher
 % 08.06.22
