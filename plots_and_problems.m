@@ -30,10 +30,17 @@ plot(tmp_traj(:,1), tmp_traj(:,2), "linewidth", 1.5)
 
 %% Test Plot Peaks Triggers
 
-
-s = 1
+s = 5
 t = 1
-task = 'task_a'
+task = 'task_b'
 
+figure()
 plot_trigger_on_traj(ALLEEG, track_data, s, t, task)
+
+% gap array is 30 events times upsampling factor before constant and after
+% task =
+%     'task_b'
+% Index exceeds the number of array elements. Index must not exceed 26.
+% Error in plot_trigger_on_traj (line 32)
+%     handle{trig} = xline(time_points(handle_idx{trig}), 'color', colors{trig}, 'linewidth', 1.5); 
 
