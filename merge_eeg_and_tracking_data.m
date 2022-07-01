@@ -1,10 +1,10 @@
 % Merge eeg and tracking data
 
-% creation date: 02.06.2022 
+% creation date: 02.06.2022
 % Author: Saskia Wilken
 
 % this script reads in tracking data, upsamples it, calculates tracking
-% error (TBD), loads in preprocessed continuous (TBD) EEG files, imputes 
+% error (TBD), loads in preprocessed continuous (TBD) EEG files, imputes
 % triggers in the event structure field and creates a latency vector that allows
 % for synchronizing the tracking and the eeg data. It saves eeglab .sets
 % that contain the tracking data (TBD)
@@ -52,26 +52,30 @@ clear tmp
 warning("off","all");
 % for now only for a
 % TODO: Add in functionality for b
-a_paths = subj_paths(endsWith(subj_paths, "_A"));
+paths{1} = subj_paths(endsWith(subj_paths, "_A"));
+paths{2} = subj_paths(endsWith(subj_paths, "_B"));
+
 % what is contained in the different columns
 col_names = {'traj_x', 'traj_y', 'purs_x', 'purs_y', 'error', 'error_abs'};
-
-for p = 1:length(a_paths)
-    if ~isempty(a_paths{p}) % check if there is data
-        cd(a_paths{p});
-        file_names_curr_subj = {dir('*traj_purs*.csv').name};
-        track_data(p).("subject") = subj_ids{p};
-        track_data(p).("group") = 'control'; % TODO: Adjust if there is ever another group
-        track_data(p).("condition") = {'task_A'}; % TODO: adjust for other tasks
-        track_data(p).("path") = a_paths{p};
-        for t = 1:length(file_names_curr_subj)
-            tmp_mat = table2array(readtable(file_names_curr_subj{t}));
-            for c = 1:size(col_names,2)
-                track_data(p).("trials")(t).(col_names{c}) = tmp_mat(:,c);
+task_names = {"task_a", "task_b"};
+for task = 1:2
+    for p = 1:length(paths{task})
+        if ~isempty(paths{task}{p}) % check if there is data
+            cd(paths{task}{p});
+            file_names_curr_subj = {dir('*traj_purs*.csv').name};
+            track_data(p).("subject") = extractBefore([file_names_curr_subj{1}],'_');
+            track_data(p).("group") = 'control'; % TODO: Adjust if there is ever another group
+            %             track_data(p).("condition") = {'task_A'}; % TODO: adjust for other tasks
+            track_data(p).("path").(task_names{task}) = paths{task}{p};
+            for t = 1:length(file_names_curr_subj)
+                tmp_mat = table2array(readtable(file_names_curr_subj{t}));
+                for c = 1:size(col_names,2)
+                    track_data(p).("trials").(task_names{task})(t).(col_names{c}) = tmp_mat(:,c);
+                end
+                clear tmp_mat
             end
-            clear tmp_mat
+        else fprintf('%s contains no data', a_paths{p});
         end
-    else fprintf('%s contains no data', a_paths{p});
     end
 end
 warning("on","all");
@@ -90,11 +94,11 @@ SR = 250;
 
 for s = 1:length(track_data)
 
-        % this is such smart code...
-        % it will loop through subj ids but give an index where the
-        % elements of subj ids are in track_data
-        tmp_idx(s) = find(cellfun(@isequal, subj_ids , ...
-            repmat({track_data(s).subject}, size(subj_ids))));
+    % this is such smart code...
+    % it will loop through subj ids but give an index where the
+    % elements of subj ids are in track_data
+    tmp_idx(s) = find(cellfun(@isequal, subj_ids , ...
+        repmat({track_data(s).subject}, size(subj_ids))));
 
 end
 subj_ids = subj_ids(tmp_idx);
@@ -102,39 +106,43 @@ clear tmp_idx
 
 % upsample tracking data and transfer into time domain
 for s = 1:length(subj_ids)
-    for t = 1:size(track_data(s).trials, 2)
-        tmp_traj_y = track_data(s).trials(t).traj_y;
-        time_vec = linspace(0, length(tmp_traj_y)/FR*1000, round(length(tmp_traj_y))).';
-        inter_time_vec = linspace(time_vec(1), time_vec(end), round(length(time_vec)/FR*SR));
-        inter_traj_y = spline(time_vec, tmp_traj_y, inter_time_vec);
+    for task = 1:2
+        for t = 1:size(track_data(s).trials.(task_names{task}), 2)
 
-        % proof that it works well:
-        %         figure
-        %         plot(no_points, inter_traj_y, 'ob')
-        %         hold on
-        %         plot(time_vec, tmp_traj_y, '.r')
-        %         hold off
-        % same for pursuit
-        tmp_purs_y = track_data(s).trials(t).purs_y;
-        inter_purs_y = spline(time_vec, tmp_purs_y, inter_time_vec);
-        % note that x axis points are milliseconds now.
+            tmp_traj_y = track_data(s).trials.(task_names{task})(t).traj_y;
+            time_vec = linspace(0, length(tmp_traj_y)/FR*1000, round(length(tmp_traj_y))).';
+            inter_time_vec = linspace(time_vec(1), time_vec(end), round(length(time_vec)/FR*SR));
+            inter_traj_y = spline(time_vec, tmp_traj_y, inter_time_vec);
 
-        % proof that it works well:
-        %         figure
-        %         plot(tmp_purs_x, tmp_purs_y, 'ob')
-        %         hold on
-        %         plot(no_points, inter_purs_y, '.r')
-        %         hold off
+            % proof that it works well:
+            %         figure
+            %         plot(no_points, inter_traj_y, 'ob')
+            %         hold on
+            %         plot(time_vec, tmp_traj_y, '.r')
+            %         hold off
+            % same for pursuit
+            tmp_purs_y = track_data(s).trials.(task_names{task})(t).purs_y;
+            inter_purs_y = spline(time_vec, tmp_purs_y, inter_time_vec);
+            % note that x axis points are milliseconds now.
 
-        % for now, I am just deleting the error columns
-        % TODO: adjust or re-calculate error in Matlab
-        tmp_mat = [inter_time_vec; inter_traj_y; inter_purs_y].';
-        for c = 1:size(tmp_mat, 2)
-            track_data(s).("upsamp_trials")(t).(col_names{c}) = tmp_mat(:,c);
+            % proof that it works well:
+            %         figure
+            %         plot(tmp_purs_x, tmp_purs_y, 'ob')
+            %         hold on
+            %         plot(no_points, inter_purs_y, '.r')
+            %         hold off
+
+            % for now, I am just deleting the error columns
+            % TODO: adjust or re-calculate error in Matlab
+            tmp_mat = [inter_time_vec; inter_traj_y; inter_purs_y].';
+
+            for c = 1:size(tmp_mat, 2)
+                track_data(s).("upsamp_data").(task_names{task})(t).(col_names{c}) = tmp_mat(:,c);
+            end
+
         end
+        clear tmp_traj_y tmp_purs_y tmp_mat
     end
-    clear tmp_traj_y tmp_purs_y tmp_mat
-
 end
 
 
@@ -149,10 +157,13 @@ cd(strcat(eeg_data_path, '\preprocessed\'));
 % get all set files in the folder
 files2read = {dir('*.set').name};
 % only get files for a for now
-% TODO: adjust for b
-files2read_a = files2read(~cellfun(@isempty, regexp(files2read,'_A_')));
+% there is only merged a and b available, so this line is no longer needed.
+% Was for separating a and b task files.
+% files2read_a = files2read(~cellfun(@isempty, regexp(files2read,'_A_')));
 
-eeg_struct = pop_loadset('filename',files2read);
+EEG = pop_loadset('filename',files2read);
+[ALLEEG, EEG, CURRENTSET] = eeg_store( ALLEEG, EEG, 0 );
+eeg_struct = ALLEEG;
 
 
 %% Put Tracking and EEG Data in the same structure
@@ -163,21 +174,25 @@ all_data_struct = eeg_struct;
 
 for s = 1:length(all_data_struct)
 
-        % this is such smart code...
-        % it will loop through all data struct but give an index where the 
-        % elements of all_data_struct are in track_data
-        tmp_idx(s) = find(cellfun(@isequal, {track_data.subject}, ...
-            repmat({all_data_struct(s).subject}, size({track_data.subject}))));
+    % this is such smart code...
+    % it will loop through all data struct but give an index where the
+    % elements of all_data_struct are in track_data
+    tmp_idx(s) = find(cellfun(@isequal, {track_data.subject}, ...
+        repmat({all_data_struct(s).subject}, size({track_data.subject}))));
 
 end
+% keep only subjects with eeg and tracking data
 copy_data = track_data(tmp_idx);
 
+
+% Deprecated: Put tracking and eeg data in same strucure
 field_names = fieldnames(copy_data);
 % nope, it does not seem to be possible to concatenate structures
 % without a loop
 for s = 1:size(copy_data,2)
     if strcmp(copy_data(s).subject, all_data_struct(s).subject)
         for f = 1:length(field_names)
+            % put tracking data in all data struct
             all_data_struct(s).(field_names{f}) = copy_data(s).(field_names{f});
         end
     else
@@ -212,46 +227,52 @@ end
 % custom: "S 15": End Trial
 % custom: "S 40": Peak
 
-
-for s = 1:size(all_data_struct,2)
+for s = 1:size(eeg_struct,2)
 
     % copy urevent field to other field
-    all_data_struct(s).track_event = all_data_struct(s).urevent;
+    eeg_struct(s).track_event = eeg_struct(s).urevent;
     % copy event field to convenient format
-    event = all_data_struct(s).track_event;
+    event = eeg_struct(s).track_event;
     % sanity check of triggers - are we DEALING WITH TASK A EVEN???
     % TODO: Alter check once pipeline is adjusted for Task B as well.
     event_cat = categorical({event.type});
     categories(event_cat);
-    % if you should ever feel the need to count cats, there you go: countcats(event_cat)
+    % if you should ever feel the need to count cats, there you go:
+    countcats(event_cat); % this gives you how many triggers of each type there are.
 
-    if any(strcmp(event_cat, "S 30")) | any(strcmp(event_cat, "S 28"))
-        warning(strcat(['Caution! Subject', all_data_struct(s).subject, 'seems to be a task C trigger file. Skipping']));
+    % is this task c?
+    if any(strcmp({event.type}, repmat("S 30",size({event.type},1), size({event.type},2) ))) | ...
+            any(strcmp({event.type}, repmat("S 28",size({event.type},1), size({event.type},2) )))
+        warning(strcat(['Caution! Subject', eeg_struct(s).subject, 'seems to be a task C trigger file. Skipping']));
         continue
-    elseif any(strcmp(event_cat, "S 20")) | any(strcmp(event_cat, "S 21"))
-        warning(strcat(['Caution! Subject', all_data_struct(s).subject, ' seems to be a task B trigger file. Skipping']));
-        continue
+        % if it is not, is this task b?
+        %     elseif any(strcmp({event.type}, repmat("S 20",size({event.type},1), size({event.type},2) ))) | ...
+        %            any(strcmp({event.type}, repmat("S 21",size({event.type},1), size({event.type},2) )))
+        %         warning(strcat(['Caution! Subject', eeg_struct(s).subject, ' seems to be a task B trigger file. Skipping']));
+        %         continue
     end
 
     % delete all triggers before S11
-    event = event(find(strcmp({event.type}, "S 11")):end);
-    % copy event types column to convenient format
+    start_pract = find(strcmp({event.code}, "New Segment"))+1;
+    end_pract = find(strcmp({event.type}, "S 11"))-1;
+    event([start_pract(1):end_pract(1), start_pract(2):end_pract(2)]) = [];
 
     % insert end trial triggers
 
-    first_12 = true;
     last_trigger = "none";
+
     % loop through elements of event_types.
     i = 0;
     while i < length({event.type})
         i = i + 1;
+        start_exp = find(strcmp({event.code}, "New Segment"));
+
         % if an event type is either 16 or 12...
         if (strcmp(event(i).type, "S 16") | strcmp(event(i).type, "S 12"))
-            % make sure the first entry is skipped (since the first fix cross
-            % is not a trial end)
-
-            if first_12
-                first_12 = false;
+            % make sure the first entry after S 11 is skipped (since the first fix cross
+            % is not a trial end) via checking whether i is shortly after S
+            % 11
+            if any(start_exp(1):start_exp(1)+4 == i) | any(start_exp(2):start_exp(2)+4 == i)
                 continue
             end
 
@@ -279,8 +300,12 @@ for s = 1:size(all_data_struct,2)
     event = [event, event(end)];
     event(end).type = 'S 15';
     event(end).code = 'inserted';
+    % and before S 11
+    event = [event(1:start_exp(2)-1), event(start_exp(2)-1), event(start_exp(2):end)];
+    event(start_exp(2)-1).type = 'S 15';
+    event(start_exp(2)-1).code = 'inserted';
     % copy the new event_types struct into track event
-    all_data_struct(s).track_event = event;
+    eeg_struct(s).track_event = event;
 
     % start trial indices
     % get the indices of the "S 27" in event.type
@@ -302,87 +327,130 @@ for s = 1:size(all_data_struct,2)
 
     % this syntax is confusing as hell. left hand side of the assignment needs
     % to be a vector, right hand side single outputs and matlab is happy...
-    [all_data_struct(s).track_event.trial_latency] = tmp{:};
+    [eeg_struct(s).track_event.trial_latency] = tmp{:};
 
     % update event
-    event = all_data_struct(s).track_event;
+    event = eeg_struct(s).track_event;
+    % initialize trial number field
+    tmp = num2cell(repmat(9999, size(eeg_struct(s).track_event)));
+    [event.("trial_number")] = tmp{:};
 
     if length(trial_starts) == length(trial_ends)
+        % loop through trial start indices
         for idx = 1:length(trial_starts)
-            % set latencies
-            subtracted =  num2cell([event(trial_starts(idx):trial_ends(idx)).trial_latency] - ...
-                event(trial_starts(idx)).trial_latency);
-            [event(trial_starts(idx):trial_ends(idx)).trial_latency] = subtracted{:};
+            % set per trial latencies of events in trial
+            trial_event_latencies = [event(trial_starts(idx):trial_ends(idx)).trial_latency] - ...
+                event(trial_starts(idx)).trial_latency;
+            trial_event_latencies_cell =  num2cell(trial_event_latencies);
+            [event(trial_starts(idx):trial_ends(idx)).trial_latency] = trial_event_latencies_cell{:};
+            % add field: trial number
+            if idx <= 72
+            trial_num = idx;
+            elseif 72 < idx <= 72*2
+                trial_num = idx - 72;
+            else
+                trial_num = idx - 72*2;
+            end
+            trial_idx = num2cell(repmat(trial_num, size(trial_event_latencies_cell)));
+            [event(trial_starts(idx):trial_ends(idx)).("trial_number")] = trial_idx{:};
+            % add field: trial latency ms
+            trial_event_latencies_ms = num2cell(trial_event_latencies/250*1000);
+            [event(trial_starts(idx):trial_ends(idx)).("trial_latency_ms")] = trial_event_latencies_ms{:};
         end
     else
-        warning(strcat(['Subject ', all_data_struct(s).subject, ...
+        warning(strcat(['Subject ', eeg_struct(s).subject, ...
             ' has an unequal number of trial start and trial end triggers!', ...
             ' No trial latencies will be computed. ']));
+        NOLATENCIES = eeg_struct(s).subject;
     end
 
-    all_data_struct(s).track_event = event;
+    eeg_struct(s).track_event = event;
 
 end
 
 
 % Notes: 91L3HA is excluded because recording started too late.
-% WM87B is excluded cause there is no behavioral data. 
+% WM87B is excluded cause there is no behavioral data.
+% TODO: Warning: Subject ZV583 has an unequal number of trial start and trial end triggers! No trial latencies will be computed.
 
 
 %% Find Peaks of Tracking Data and put them in Events
 
 % "S 40": Peak
 
-for s = 1:size(all_data_struct,2)
+for s = 1:size(eeg_struct,2)
 
-    event = all_data_struct(s).track_event;
+    event = eeg_struct(s).track_event;
+    if ~strcmp(NOLATENCIES, eeg_struct(s).subject)
+        for task = 1:2
+            % get eeg triggers of current task
+            exp_ind = [find(strcmp({event.code}, "New Segment"))-1, length({event.type})];
+            exp_ind(1) = 1;
+            % add field to events: task
+            task_labels = cellstr(repmat(task_names{task}, [1, length(exp_ind(task):exp_ind(task+1))]));
+            [event(exp_ind(task):exp_ind(task+1)).("task")] = task_labels{:};
+            event_cur_task = event(find(strcmp({event.task}, task_names{task})));
 
-    for t = 1:size(all_data_struct(s).upsamp_trials,2)
+            for t = 1:size(copy_data(s).upsamp_data.(task_names{task}),2)
 
-        % get peak indices within trial trajectory data
-        [~, index_max_traj] = findpeaks(all_data_struct(s).upsamp_trials(t).traj_y);
-        [~, index_min_traj] = findpeaks(-all_data_struct(s).upsamp_trials(t).traj_y);
-        % locate trial starts in eeg event
-        trial_starts = find(strcmp({event.type}, "S 27"));
-        % locate trial ends in eeg event
-        trial_ends = find(strcmp({event.type}, "S 15"));
+                current_trial_traj = copy_data(s).upsamp_data.(task_names{task})(t).traj_y;
 
-        if length(trial_starts) ~= length(trial_ends)
-            disp(strcat(['Subject ', all_data_struct(s).subject, ...
-                ' does not have an equal number of start and end trial triggers.']))
-            continue
+                % get peak indices within trial trajectory data
+                [~, index_max_traj] = findpeaks(current_trial_traj);
+                [~, index_min_traj] = findpeaks(-current_trial_traj);
+
+                % locate current trial in eeg event
+                cur_trial_idx = find([event_cur_task.trial_number] == t);
+
+                %
+                %             if length(trial_starts) ~= length(trial_ends)
+                %                 warning(strcat(['Subject ', eeg_struct(s).subject, ...
+                %                     ' does not have an equal number of start and end trial ' ...
+                %                     'triggers in ', char(task_names{task}), '. Skipping.']))
+                %                 break
+                %             end
+
+                % get the latencies of the current trial in the eeg data
+                current_start_latency = event_cur_task(cur_trial_idx(1)).latency;
+                current_end_latency = event_cur_task(cur_trial_idx(end)).latency;
+                % add current start latency to the indicies of the peaks (which are in the same sampling rate
+                % as the eeg signal due to upsampling)
+                current_trial_peak_latencies = sort([index_max_traj; index_min_traj]);
+                current_peak_latencies = current_start_latency + current_trial_peak_latencies;
+
+                % for each of the current peak latencies...
+                for idx = 1:length(current_peak_latencies)
+
+                    % find the event that is one event before the peak
+                    % (which is the largest negative latency)
+                    tmp = [[event_cur_task.latency] - current_peak_latencies(idx)];
+                    current_event_idx = max(find(tmp <= 0 ));
+
+                    % insert the peak event markers at position in question
+                    % (copy event before it and adjust its values)
+                    event_cur_task = [event_cur_task(1:current_event_idx-1), ...
+                        event_cur_task(current_event_idx), event_cur_task(current_event_idx:end)];
+                    % replace the copied rows' type with S 40, making sure the
+                    % second event is overwritten
+                    event_cur_task(current_event_idx+1).type = 'S 40';
+                    event_cur_task(current_event_idx+1).code = 'inserted';
+                    event_cur_task(current_event_idx+1).latency = current_peak_latencies(idx);
+                    event_cur_task(current_event_idx+1).trial_latency = current_trial_peak_latencies(idx);
+                    event_cur_task(current_event_idx+1).trial_latency_ms = event_cur_task(current_event_idx+1).trial_latency/250*1000;
+                    event_cur_task(current_event_idx+1).trial_number = t;
+
+                end
+            end
+            % copy the event structure into a temporary field in eeg_struct
+            eeg_struct(s).(task_names{task}) =  event_cur_task;
         end
-
-        % get the latencies of the current trial in the eeg data
-        current_start_latency = event(trial_starts(t)).latency;
-        current_end_latency = event(trial_ends(t)).latency;
-        % add current start latency to the indicies of the peaks (which are in the same sampling rate
-        % as the eeg signal due to upsampling)
-        current_trial_peak_latencies = sort([index_max_traj;index_min_traj]);
-        current_peak_latencies = current_start_latency+current_trial_peak_latencies;
-
-        % for each of the current peak latencies...
-        for idx = 1:length(current_peak_latencies)
-
-            % find the event that is one event before the peak
-            % (which is the largest negative latency)
-            tmp = [[event.latency]- current_peak_latencies(idx)];
-            current_event_idx = max(find(tmp <= 0 ));
-
-            % insert the peak event markers at position in question
-            % (copy event before it and adjust its values)
-            event = [event(1:current_event_idx-1), event(current_event_idx), event(current_event_idx:end)];
-            % replace the copied rows' type with S 40, making sure the
-            % second event is overwritten
-            event(current_event_idx+1).type = 'S 40';
-            event(current_event_idx+1).code = 'inserted';
-            event(current_event_idx+1).latency = current_peak_latencies(idx);
-            event(current_event_idx+1).trial_latency = current_trial_peak_latencies(idx);
-
-        end
+        % concatenate the two fields so eeglab can work with them
+        eeg_struct(s).track_event_peaks = [eeg_struct(s).(task_names{1}), eeg_struct(s).(task_names{2})];
+    else
+        warning(strcat(['Skipping subject ', eeg_struct(s).subject, ...
+            ' due to unequal number of trial start and trial end triggers!', ...
+            ' And therefore missing trial latencies. ']));
     end
-    % copy the event structure into a new field in all_data_struct
-    all_data_struct(s).track_event_peaks =  event;
 end
 %plot(copy_data.task_a.(field_names{s}).(trial_name{t})(:,1), copy_data.task_a.(field_names{s}).(trial_name{t})(:,2))
 
@@ -399,7 +467,24 @@ end
 % min_traj_coords = [trialdata.traj_x_pix(index_min_traj), trialdata.traj_y_pix(index_min_traj)];
 
 
+%% Remove historical fields; can be commented out here easily for re-tracing changes
+
+% tmp_struct = eeg_struct;
+
+tmp_struct = all_data_struct;
+
+for s = 1:size(tmp_struct, 2)
+
+    tmp_struct(s).event = tmp_struct(s).track_event_peaks;
+
+end
+tmp_struct = rmfield(tmp_struct, ["track_event", "track_event_peaks"]);
+
+% isequal(fieldnames(ALLEEG), fieldnames(tmp_struct))
+
+
 %% Replace Constant Traj Trigger from .vmrk with calculated from .npz
+
 %align constant trajectories of several trials
 %compare constant trajectory and trial trajectory at every point
 %calculate variance of difference
@@ -407,8 +492,25 @@ end
 
 % [shift, start_ind, end_ind] = align_const_traj(const_traj, trial_traj);
 
+% TOOD: once you are done, tell Adriana
 
-%% save sets
 
-    TMPEEG = pop_saveset(TMPEEG,'filename',[files2read{ind}(1:end-7) '_A_epoched'], 'filepath', char(savepath));
+%% Save sets
+
+% This does not work... :(
+% go over this
+% https://eeglab.org/tutorials/ConceptsGuide/Data_Structures.html
+
+out_path = strcat([file_path, '\01_merged_data\']);
+EEG_file_name_suffix = '_EEG';
+track_file_name_suffix = 'all_tracking_data.mat';
+
+for s = 1:size(copy_data, 2)
+
+    file_name = strcat([tmp_struct(s).subject, EEG_file_name_suffix]);
+    pop_saveset(tmp_struct(s), 'filename', file_name, 'filepath', out_path);
+
+end
+file_name = strcat([out_path, track_file_name_suffix]);
+save(file_name, 'copy_data');
 
