@@ -112,6 +112,42 @@ for ind = 1:length(filenames)
     TMPEEG_B.setname = [filename '_icaclean_epoched_B'];
     %TMPEEG_B = pop_saveset(TMPEEG_B, 'filename', TMPEEG_B.setname, 'filepath', char(savepath_epoched));
 
+     %% exlude practice trials (before urevent S11)
+
+    % get marker index in urevent structure for start exp trigger (S11)
+
+    marker_index = 1;
+    found = false;
+    
+    while found == false
+        this_marker = str2double(TMPEEG_A.urevent(marker_index).type(2:end));
+        if this_marker == 11
+            found = true;
+        else
+            marker_index = marker_index + 1;
+        end
+    end
+
+    % marker_index == TMPEEG.event.urevent
+    % extract index in new event structure
+
+    new_index = 1;
+    found = false;
+
+    while found == false
+        if TMPEEG_A.event(new_index).urevent > marker_index
+            found = true;
+        else
+            new_index = new_index + 1;
+        end
+    end
+
+    %save event structure with practice trials to event_with_practice
+    %save reduced event structure without practice trials to event
+    TMPEEG_A.event_with_practice = TMPEEG_A.event;
+    TMPEEG_A.event = TMPEEG_A.event_with_practice(new_index:end);
+
+    
     %% apply baseline correction and save
 
     TMPEEG_A = pop_rmbase(TMPEEG_A, [-1000 0] ,[]);
@@ -139,24 +175,5 @@ for ind = 1:length(filenames)
     TMPEEG_B.comment = TMPEEG_B.comment + "  *** apply artifact rejection";
     TMPEEG_B.setname = [filename '_complete_preprocessing_withAR_B'];
 %     TMPEEG_B = pop_saveset(TMPEEG_B, 'filename', TMPEEG_B.setname, 'filepath', char(savepath_artifactrej));
-
-    %% exlude practice trials (before urevent S11)
-
-    marker_index = 1;
-    found = false;
-    
-    while found == false
-        this_marker = str2double(TMPEEG.urevent(marker_index).type(2:end));
-        if this_marker == 11
-            found = true;
-        else
-            marker_index = marker_index + 1;
-        end
-    end
-
-    % marker_index == TMPEEG.urevent.bvmknum
-
-
-
 
 end
