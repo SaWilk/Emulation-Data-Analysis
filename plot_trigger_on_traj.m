@@ -68,14 +68,16 @@ for trig = 1:length(trigger_labels)
     % draw an xline of the corresponding time point and use the index
     handle{trig} = xline(time_points(handle_idx{trig}), 'color', colors{trig}, 'linewidth', 1.25);
 end
+
+% [min_y, max_y] = bounds(y);
+% y_bounds = repmat([min_y, max_y], size(epoch_bounds_times,1), 1)
+% rectangle('Position',[epoch_bounds_times(1,1), y_bounds(1,1), epoch_bounds_times(1,2), y_bounds(1,2)])
 % only keep first elements since we only want one legend per plot type. 
-[min_y, max_y] = bounds(y);
-y_bounds = repmat([min_y, max_y], size(epoch_bounds_times,1), 1)
-rectangle('Position',[epoch_bounds_times(1,1), y_bounds(1,1), epoch_bounds_times(1,2), y_bounds(1,2)])
 handle_legend_idx = cellfun(@(v)v(1),handle);
 
-h=fill([0,1000,1,0],[0,0,2,2],'red');
-h.FaceAlpha=0.3;
+% TODO: Add in functionality that the epoch starts and ends are visible. 
+% h=fill([0,1000,1,0],[0,0,2,2],'red');
+% h.FaceAlpha=0.3;
 legend(handle_legend_idx, trigger_labels);
 hold off
 

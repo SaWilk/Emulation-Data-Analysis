@@ -50,8 +50,6 @@ clear tmp
 %% Load Tracking data
 
 warning("off","all");
-% for now only for a
-% TODO: Add in functionality for b
 paths{1} = subj_paths(endsWith(subj_paths, "_A"));
 paths{2} = subj_paths(endsWith(subj_paths, "_B"));
 
@@ -110,8 +108,11 @@ for s = 1:length(subj_ids)
         for t = 1:size(track_data(s).trials.(task_names{task}), 2)
 
             tmp_traj_y = track_data(s).trials.(task_names{task})(t).traj_y;
+            % create time vec
             time_vec = linspace(0, length(tmp_traj_y)/FR*1000, round(length(tmp_traj_y))).';
+            % intepolated time vec
             inter_time_vec = linspace(time_vec(1), time_vec(end), round(length(time_vec)/FR*SR));
+            % interpolate using spline interpolation
             inter_traj_y = spline(time_vec, tmp_traj_y, inter_time_vec);
 
             % proof that it works well:
@@ -137,9 +138,9 @@ for s = 1:length(subj_ids)
             tmp_mat = [inter_time_vec; inter_traj_y; inter_purs_y].';
 
             for c = 1:size(tmp_mat, 2)
+                tmp_mat
                 track_data(s).("upsamp_data").(task_names{task})(t).(col_names{c}) = tmp_mat(:,c);
             end
-
         end
         clear tmp_traj_y tmp_purs_y tmp_mat
     end
@@ -147,6 +148,18 @@ end
 
 
 %% Calculate difference between pursuit and trajectory
+
+
+for s = 1:length(subj_ids)
+    for task = 1:2
+        for t = 1:size(track_data(s).trials.(task_names{task}), 2)
+            cur_traj = track_data(s).upsamp_data.(task_names{task})(t).traj_y;
+            cur_purs = track_data(s).upsamp_data.(task_names{task})(t).purs_y;
+            cur_err = abs(cur_traj - cur_purs);
+            track_data(s).upsamp_data.(task_names{task})(t).("error") = 
+        end
+    end
+end
 
 
 %% Load EEG data
@@ -186,19 +199,29 @@ copy_data = track_data(tmp_idx);
 
 
 % Deprecated: Put tracking and eeg data in same strucure
-field_names = fieldnames(copy_data);
-% nope, it does not seem to be possible to concatenate structures
-% without a loop
-for s = 1:size(copy_data,2)
-    if strcmp(copy_data(s).subject, all_data_struct(s).subject)
-        for f = 1:length(field_names)
-            % put tracking data in all data struct
-            all_data_struct(s).(field_names{f}) = copy_data(s).(field_names{f});
-        end
-    else
-        disp(strcat(all_data_struct(s).subject, " has no matching tracking data"));
-    end
-end
+% TODO: write them directly in a 3D Matrix instead of in fields inside a
+% structure
+% field_names = fieldnames(copy_data);
+% % nope, it does not seem to be possible to concatenate structures
+% % without a loop
+% for s = 1:size(copy_data,2)
+%     if strcmp(copy_data(s).subject, all_data_struct(s).subject)
+%         for f = 1:length(field_names)
+%             % put tracking data in all data struct
+%             all_data_struct(s).(field_names{f}) = copy_data(s).(field_names{f});
+%         end
+%     else
+%         disp(strcat(all_data_struct(s).subject, " has no matching tracking data"));
+%     end
+% end
+
+
+%% Reject Trials Behaviorally
+
+
+
+
+%% Run The Same Script that Adriana used to reject Trials TODO
 
 
 %% Get Latency Vector that Shows Beginnings of Trials
