@@ -1,14 +1,16 @@
-function [plot_of_trigger_and_traj] = plot_trigger_on_traj(EEG_sets, traj_struct, subject, trial, task, epoch_lim, epoch_cen)
+function [plot_of_trigger_and_traj] = plot_trigger_on_traj(EEG_sets, traj_struct, subject, trial, task, plot_purs)
 %plot_trigger_on_traj plots both all trigger and trajectory in same plot
 %   requires the output of merge_eeg_and_tracking_data script
 
-EEG_sets = ALLEEG;
-traj_struct = track_data;
-subject = 4;
-trial = 50;
-task = 'task_a';
-epoch_lim = [-1000,750]; % epoch limits in ms
-epoch_cen = "S 40"; % epoch center
+% epoch_lim, epoch_cen moved from list of input arguments
+% EEG_sets = eeg_struct;
+% traj_struct = track_data;
+% subject = 4;
+% trial = 50;
+% task = 'task_a';
+% plot_purs = true;
+% epoch_lim = [-1000,750]; % epoch limits in ms
+% epoch_cen = "S 40"; % epoch center
 
 clear handle trig_idx trigger_labels trigger_names trigger_dict triggers handle_legend_idx
 
@@ -24,7 +26,7 @@ trigger_dict = {["exp_start", "S 11"], ["fix", "S 12"], ["trial_start_L", "S 13"
 % select events
 % find the indicies of the task in the events structure
 cor_task_idx = find(strcmp({EEG_sets(subject).event.task}, task));
-[min_idx, max_idx] = bounds(cor_task_idx)
+[min_idx, max_idx] = bounds(cor_task_idx);
 % and within that, the indicies of the events for the trial
 cor_trial_idx = find([EEG_sets(subject).event(cor_task_idx).trial_number] == trial);
 % then get all the trigger codes within that trial
@@ -34,15 +36,16 @@ trigger_labels = unique(triggers, 'stable');
 % and then the trial latency in ms of the events for plotting
 time_points = [EEG_sets(subject).event(cor_task_idx(cor_trial_idx)).trial_latency_ms]; 
 % get idx of central event
-epoch_cen_times = time_points(find(strcmp(triggers, epoch_cen)));
+% epoch_cen_times = time_points(find(strcmp(triggers, epoch_cen)));
 
 % get epoch boundaries
-tmp = repmat(epoch_lim, size(epoch_cen_times,2), 1);
-epoch_bounds_times = bsxfun(@plus, epoch_cen_times', tmp);
+% tmp = repmat(epoch_lim, size(epoch_cen_times,2), 1);
+% epoch_bounds_times = bsxfun(@plus, epoch_cen_times', tmp);
 
 % get upsampled trajectory
 x = traj_struct(subject).upsamp_data.(task)(trial).traj_x;
 y =  traj_struct(subject).upsamp_data.(task)(trial).traj_y;
+y_purs =  traj_struct(subject).upsamp_data.(task)(trial).purs_y;
 
 
 for trig_types = 1:length(trigger_labels)
@@ -57,8 +60,8 @@ end
 % prepare color palette
 colors = {'m', 'b', 'r', 'g', 'k', 'c', 'y'};
 
-v = [0 0; 1 0; 1 1; 0 1];
-f = [1 2 3 4];
+% v = [0 0; 1 0; 1 1; 0 1];
+% f = [1 2 3 4];
 
 % plot traj
 plot(x, y, 'linewidth', 1.25)
@@ -67,6 +70,9 @@ for trig = 1:length(trigger_labels)
     hold on
     % draw an xline of the corresponding time point and use the index
     handle{trig} = xline(time_points(handle_idx{trig}), 'color', colors{trig}, 'linewidth', 1.25);
+end
+if plot_purs
+    plot(x, y_purs, 'linewidth', 1.25, 'color', 'r')
 end
 
 % [min_y, max_y] = bounds(y);

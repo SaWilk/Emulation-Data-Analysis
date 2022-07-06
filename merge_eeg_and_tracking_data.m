@@ -22,6 +22,7 @@ clc
 % file location
 file_path = matlab.desktop.editor.getActiveFilename;
 file_path = fileparts(file_path);
+addpath(file_path)
 % tracking data
 track_data_path = strcat(file_path, "\00_npz_files"); % get root path to data folder
 subj_paths = genpath(track_data_path); % generate subfolder paths
@@ -102,7 +103,7 @@ end
 subj_ids = subj_ids(tmp_idx);
 clear tmp_idx
 
-name_cols = {'tray_x', 'traj_y', 'purs_y'};
+name_cols = {'traj_x', 'traj_y', 'purs_y'};
 
 % upsample tracking data and transfer into time domain
 for s = 1:length(subj_ids)
@@ -156,10 +157,14 @@ for s = 1:length(subj_ids)
             cur_traj = track_data(s).upsamp_data.(task_names{task})(t).traj_y;
             cur_purs = track_data(s).upsamp_data.(task_names{task})(t).purs_y;
             cur_err = abs(cur_traj - cur_purs);
+            cur_mean_err = mean(cur_err);
             track_data(s).upsamp_data.(task_names{task})(t).("error") = cur_err;
+            track_data(s).upsamp_data.(task_names{task})(t).("mean_error") = cur_mean_err;
         end
     end
 end
+
+clear cur_traj cur_purs cur_err
 
 
 %% Load EEG data
@@ -215,14 +220,6 @@ track_data = track_data(tmp_idx);
 %         disp(strcat(all_data_struct(s).subject, " has no matching tracking data"));
 %     end
 % end
-
-
-%% Reject Trials Behaviorally
-
-% extra column in events with exclude 1 or 0 
-
-
-%% Run The Same Script that Adriana used to reject Trials TODO
 
 
 %% Get Latency Vector that Shows Beginnings of Trials
@@ -415,9 +412,9 @@ for s = 1:size(eeg_struct,2)
             [event(exp_ind(task):exp_ind(task+1)).("task")] = task_labels{:};
             event_cur_task = event(find(strcmp({event.task}, task_names{task})));
 
-            for t = 1:size(copy_data(s).upsamp_data.(task_names{task}),2)
+            for t = 1:size(track_data(s).upsamp_data.(task_names{task}),2)
 
-                current_trial_traj = copy_data(s).upsamp_data.(task_names{task})(t).traj_y;
+                current_trial_traj = track_data(s).upsamp_data.(task_names{task})(t).traj_y;
 
                 % get peak indices within trial trajectory data
                 [~, index_max_traj] = findpeaks(current_trial_traj);
@@ -462,7 +459,6 @@ for s = 1:size(eeg_struct,2)
                     event_cur_task(current_event_idx+1).trial_latency = current_trial_peak_latencies(idx);
                     event_cur_task(current_event_idx+1).trial_latency_ms = event_cur_task(current_event_idx+1).trial_latency/250*1000;
                     event_cur_task(current_event_idx+1).trial_number = t;
-
                 end
             end
             % copy the event structure into a temporary field in eeg_struct
@@ -493,18 +489,43 @@ end
 % min_traj_coords = [trialdata.traj_x_pix(index_min_traj), trialdata.traj_y_pix(index_min_traj)];
 
 
+%% Reject Trials Behaviorally
+
+% extra column in events with exclude 1 or 0 
+count = 1;
+for s = 1:length(subj_ids)
+    for task = 1:2
+        for t = 1:size(track_data(s).trials.(task_names{task}), 2)
+%             error_cell{s}{task}{t} = track_data(s).upsamp_data.(task_names{task})(t).error;
+            cur_mean_errors = track_data(s).upsamp_data.(task_names{task})(t).mean_error;
+            which_error = [s, task, t];
+            error_cell{count} = {cur_mean_errors, which_error};
+            count = count + 1;
+        end
+    end
+end
+
+tmp = cellfun(@(v)v(1),error_cell);
+tmp_vec = [tmp{:}];
+[val, idx] = maxk(tmp_vec,10);
+idx = find(tmp_vec > .14)
+suspicious_traj = cellfun(@(v)v(2),{error_cell{idx}});
+% check sope of error distribitopn
+% plot error distribution
+plot(sort(tmp_vec))
+plot_trigger_on_traj(eeg_struct, track_data, suspicious_traj{1}(1), suspicious_traj{1}(3), suspicious_traj{1}(2), true)
+% looks like it starts to get really weird at 1.4
+track_data(s).upsamp_data.(task)(trial).traj_x
+
+
 %% Remove historical fields; can be commented out here easily for re-tracing changes
 
 % tmp_struct = eeg_struct;
 
-tmp_struct = all_data_struct;
-
-for s = 1:size(tmp_struct, 2)
-
-    tmp_struct(s).event = tmp_struct(s).track_event_peaks;
-
+for s = 1:size(eeg_struct, 2)
+    s = eeg_struct(s).track_event_peaks;
 end
-tmp_struct = rmfield(tmp_struct, ["track_event", "track_event_peaks"]);
+eeg_struct = rmfield(eeg_struct, ["track_event", "track_event_peaks"]);
 
 % isequal(fieldnames(ALLEEG), fieldnames(tmp_struct))
 
@@ -533,8 +554,8 @@ track_file_name_suffix = 'all_tracking_data.mat';
 
 for s = 1:size(track_data, 2)
 
-    file_name = strcat([tmp_struct(s).subject, EEG_file_name_suffix]);
-    pop_saveset(tmp_struct(s), 'filename', file_name, 'filepath', out_path);
+    file_name = strcat([eeg_struct(s).subject, EEG_file_name_suffix]);
+    pop_saveset(eeg_struct(s), 'filename', file_name, 'filepath', out_path);
 
 end
 file_name = strcat([out_path, track_file_name_suffix]);
