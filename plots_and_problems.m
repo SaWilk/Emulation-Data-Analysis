@@ -37,10 +37,15 @@ task = 'task_b'
 figure()
 plot_trigger_on_traj(ALLEEG, track_data, s, t, task)
 
-% gap array is 30 events times upsampling factor before constant and after
-% task =
-%     'task_b'
-% Index exceeds the number of array elements. Index must not exceed 26.
-% Error in plot_trigger_on_traj (line 32)
-%     handle{trig} = xline(time_points(handle_idx{trig}), 'color', colors{trig}, 'linewidth', 1.5); 
+% TODO: Test if it looks good when the constant triggers are moved by the 
+% duration of the gap array. It is 30 points times upsampling factor before 
+% % constant and after. Put some trials in a subplot to check
+
+%% Visualize Epoch starts and ends 
+
+% TODO: Finish function funcitonality that allows to see when the epochs
+% start, when they end and how they overlap. 
+
+
+
 
