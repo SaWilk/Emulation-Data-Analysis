@@ -102,6 +102,8 @@ end
 subj_ids = subj_ids(tmp_idx);
 clear tmp_idx
 
+name_cols = {'tray_x', 'traj_y', 'purs_y'};
+
 % upsample tracking data and transfer into time domain
 for s = 1:length(subj_ids)
     for task = 1:2
@@ -138,8 +140,7 @@ for s = 1:length(subj_ids)
             tmp_mat = [inter_time_vec; inter_traj_y; inter_purs_y].';
 
             for c = 1:size(tmp_mat, 2)
-                tmp_mat
-                track_data(s).("upsamp_data").(task_names{task})(t).(col_names{c}) = tmp_mat(:,c);
+                track_data(s).("upsamp_data").(task_names{task})(t).(name_cols{c}) = tmp_mat(:,c);
             end
         end
         clear tmp_traj_y tmp_purs_y tmp_mat
@@ -149,14 +150,13 @@ end
 
 %% Calculate difference between pursuit and trajectory
 
-
 for s = 1:length(subj_ids)
     for task = 1:2
         for t = 1:size(track_data(s).trials.(task_names{task}), 2)
             cur_traj = track_data(s).upsamp_data.(task_names{task})(t).traj_y;
             cur_purs = track_data(s).upsamp_data.(task_names{task})(t).purs_y;
             cur_err = abs(cur_traj - cur_purs);
-            track_data(s).upsamp_data.(task_names{task})(t).("error") = 
+            track_data(s).upsamp_data.(task_names{task})(t).("error") = cur_err;
         end
     end
 end
@@ -195,7 +195,8 @@ for s = 1:length(all_data_struct)
 
 end
 % keep only subjects with eeg and tracking data
-copy_data = track_data(tmp_idx);
+backup_data = track_data;
+track_data = track_data(tmp_idx);
 
 
 % Deprecated: Put tracking and eeg data in same strucure
@@ -218,7 +219,7 @@ copy_data = track_data(tmp_idx);
 
 %% Reject Trials Behaviorally
 
-
+% extra column in events with exclude 1 or 0 
 
 
 %% Run The Same Script that Adriana used to reject Trials TODO
@@ -475,6 +476,8 @@ for s = 1:size(eeg_struct,2)
             ' And therefore missing trial latencies. ']));
     end
 end
+
+% TODO: There is a task_a or task_b bug
 %plot(copy_data.task_a.(field_names{s}).(trial_name{t})(:,1), copy_data.task_a.(field_names{s}).(trial_name{t})(:,2))
 
 %get pixel coordinates of extracted maxima to calculate euclidean distance
@@ -528,12 +531,12 @@ out_path = strcat([file_path, '\01_merged_data\']);
 EEG_file_name_suffix = '_EEG';
 track_file_name_suffix = 'all_tracking_data.mat';
 
-for s = 1:size(copy_data, 2)
+for s = 1:size(track_data, 2)
 
     file_name = strcat([tmp_struct(s).subject, EEG_file_name_suffix]);
     pop_saveset(tmp_struct(s), 'filename', file_name, 'filepath', out_path);
 
 end
 file_name = strcat([out_path, track_file_name_suffix]);
-save(file_name, 'copy_data');
+save(file_name, 'track_data');
 
