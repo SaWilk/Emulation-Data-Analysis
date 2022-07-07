@@ -2,7 +2,7 @@ function [plot_of_trigger_and_traj] = plot_trigger_on_traj(EEG_sets, traj_struct
 %plot_trigger_on_traj plots both all trigger and trajectory in same plot
 %   requires the output of merge_eeg_and_tracking_data script
 
-% epoch_lim, epoch_cen moved from list of input arguments
+% epoch_lim, epoch_cen  % moved from list of input arguments
 % EEG_sets = eeg_struct;
 % traj_struct = track_data;
 % subject = 4;
@@ -22,6 +22,13 @@ trigger_dict = {["exp_start", "S 11"], ["fix", "S 12"], ["trial_start_L", "S 13"
     ["C_too_early", "S 28"], ["C_just_right", "S 29"], ["C_too_late", "S 30"], ...
     ["peak", "S 40"]};
 
+if isnumeric(task)
+    task_names = {'task_a', 'task_b', 'task_c'};
+    task = task_names{task};
+elseif ischar(task)
+else
+    error("task must be either numeric or character")
+end
 
 % select events
 % find the indicies of the task in the events structure

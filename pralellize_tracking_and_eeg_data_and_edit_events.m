@@ -4,10 +4,14 @@
 % Author: Saskia Wilken
 
 % this script reads in tracking data, upsamples it, calculates tracking
-% error (TBD), loads in preprocessed continuous (TBD) EEG files, imputes
-% triggers in the event structure field and creates a latency vector that allows
-% for synchronizing the tracking and the eeg data. It saves eeglab .sets
-% that contain the tracking data (TBD)
+% error, loads in preprocessed continuous EEG files, imputes peak and end 
+% trial triggers in the event structure field, removes practice trial
+% % triggers and adds a field with the trial number, the task, the trial 
+% % latency and the trial latency in ms to the event structure. It rejects
+% trials that contain artifactually high tracking error. It saves eeglab 
+% .sets that contain the new event field and a .mat file that contains 
+% the tracking data that contain the tracking data.
+
 
 %% Empty
 
@@ -64,7 +68,6 @@ for task = 1:2
             file_names_curr_subj = {dir('*traj_purs*.csv').name};
             track_data(p).("subject") = extractBefore([file_names_curr_subj{1}],'_');
             track_data(p).("group") = 'control'; % TODO: Adjust if there is ever another group
-            %             track_data(p).("condition") = {'task_A'}; % TODO: adjust for other tasks
             track_data(p).("path").(task_names{task}) = paths{task}{p};
             for t = 1:length(file_names_curr_subj)
                 tmp_mat = table2array(readtable(file_names_curr_subj{t}));
@@ -149,7 +152,7 @@ for s = 1:length(subj_ids)
 end
 
 
-%% Calculate difference between pursuit and trajectory
+%% Calculate difference between pursuit and trajectory (error)
 
 for s = 1:length(subj_ids)
     for task = 1:2
@@ -184,24 +187,26 @@ EEG = pop_loadset('filename',files2read);
 eeg_struct = ALLEEG;
 
 
-%% Put Tracking and EEG Data in the same structure
+%% Put Tracking and EEG Data in the same structure / or actually, just 
+% remove subjects that have no corresponding eeg data. 
 
-all_data_struct = eeg_struct;
+% all_data_struct = eeg_struct;
 
 % remove all subjects that have no correcponding tracking data
 
-for s = 1:length(all_data_struct)
+for s = 1:length(eeg_struct)
 
     % this is such smart code...
     % it will loop through all data struct but give an index where the
     % elements of all_data_struct are in track_data
     tmp_idx(s) = find(cellfun(@isequal, {track_data.subject}, ...
-        repmat({all_data_struct(s).subject}, size({track_data.subject}))));
+        repmat({eeg_struct(s).subject}, size({track_data.subject}))));
 
 end
 % keep only subjects with eeg and tracking data
 backup_data = track_data;
 track_data = track_data(tmp_idx);
+subj_ids = subj_ids(tmp_idx);
 
 
 % Deprecated: Put tracking and eeg data in same strucure
@@ -222,8 +227,9 @@ track_data = track_data(tmp_idx);
 % end
 
 
-%% Get Latency Vector that Shows Beginnings of Trials
+%% Insert Trial Start and End Events, Remove Practice Trials, Add Trial Number and Latency Fields
 % (Necessary cause Peaks are only given in Trial Latency)
+
 %   "instruction":  10,
 %     "exp_start":    11,
 %     "fix":          12,
@@ -248,12 +254,22 @@ track_data = track_data(tmp_idx);
 % custom: "S 15": End Trial
 % custom: "S 40": Peak
 
+NOLATENCIES = {'none'};
+
 for s = 1:size(eeg_struct,2)
 
     % copy urevent field to other field
     eeg_struct(s).track_event = eeg_struct(s).urevent;
     % copy event field to convenient format
     event = eeg_struct(s).track_event;
+    % anomaly in data: subject ZV583 has two fixation cross triggers really
+    % close to one another without a trial in between. Will delete them
+    % manually.
+    if strcmp(eeg_struct(s).subject, 'ZV583')
+        % identify trial number. 
+        % [val, idx] = min(diff(find(strcmp({event.type}, 'S 12'))))
+        event(688:689)= [];
+    end
     % sanity check of triggers - are we DEALING WITH TASK A EVEN???
     % TODO: Alter check once pipeline is adjusted for Task B as well.
     event_cat = categorical({event.type});
@@ -392,7 +408,6 @@ end
 
 % Notes: 91L3HA is excluded because recording started too late.
 % WM87B is excluded cause there is no behavioral data.
-% TODO: Warning: Subject ZV583 has an unequal number of trial start and trial end triggers! No trial latencies will be computed.
 
 
 %% Find Peaks of Tracking Data and put them in Events
@@ -473,9 +488,6 @@ for s = 1:size(eeg_struct,2)
     end
 end
 
-% TODO: There is a task_a or task_b bug
-%plot(copy_data.task_a.(field_names{s}).(trial_name{t})(:,1), copy_data.task_a.(field_names{s}).(trial_name{t})(:,2))
-
 %get pixel coordinates of extracted maxima to calculate euclidean distance
 % max_traj_coords = [trialdata.traj_x_pix(index_max_traj), trialdata.traj_y_pix(index_max_traj)];
 
@@ -489,6 +501,18 @@ end
 % min_traj_coords = [trialdata.traj_x_pix(index_min_traj), trialdata.traj_y_pix(index_min_traj)];
 
 
+%% Remove historical fields; can be commented out here easily for re-tracing changes
+
+% tmp_struct = eeg_struct;
+
+for s = 1:size(eeg_struct, 2)
+    eeg_struct(s).event = eeg_struct(s).track_event_peaks;
+end
+eeg_struct = rmfield(eeg_struct, ["track_event", "track_event_peaks"]);
+
+% isequal(fieldnames(ALLEEG), fieldnames(tmp_struct))
+
+
 %% Reject Trials Behaviorally
 
 % extra column in events with exclude 1 or 0 
@@ -498,37 +522,74 @@ for s = 1:length(subj_ids)
         for t = 1:size(track_data(s).trials.(task_names{task}), 2)
 %             error_cell{s}{task}{t} = track_data(s).upsamp_data.(task_names{task})(t).error;
             cur_mean_errors = track_data(s).upsamp_data.(task_names{task})(t).mean_error;
+            cur_max_errors = max(track_data(s).upsamp_data.(task_names{task})(t).error);
             which_error = [s, task, t];
+            error_max_cell{count} = {cur_max_errors, which_error};
             error_cell{count} = {cur_mean_errors, which_error};
             count = count + 1;
         end
     end
 end
 
-tmp = cellfun(@(v)v(1),error_cell);
-tmp_vec = [tmp{:}];
-[val, idx] = maxk(tmp_vec,10);
-idx = find(tmp_vec > .14)
-suspicious_traj = cellfun(@(v)v(2),{error_cell{idx}});
-% check sope of error distribitopn
-% plot error distribution
-plot(sort(tmp_vec))
-plot_trigger_on_traj(eeg_struct, track_data, suspicious_traj{1}(1), suspicious_traj{1}(3), suspicious_traj{1}(2), true)
-% looks like it starts to get really weird at 1.4
-track_data(s).upsamp_data.(task)(trial).traj_x
+% Visual artifact rejection 
 
-
-%% Remove historical fields; can be commented out here easily for re-tracing changes
-
-% tmp_struct = eeg_struct;
-
-for s = 1:size(eeg_struct, 2)
-    s = eeg_struct(s).track_event_peaks;
-end
-eeg_struct = rmfield(eeg_struct, ["track_event", "track_event_peaks"]);
-
-% isequal(fieldnames(ALLEEG), fieldnames(tmp_struct))
-
+% tmp = cellfun(@(v)v(1),error_cell);
+% tmp_vec = [tmp{:}];
+% % [val, idx] = maxk(tmp_vec,10);
+% 
+% % check sope of error distribitopn
+% % plot error distribution
+% figure()
+% plot(sort(tmp_vec))
+% cutoff = mean(tmp_vec) + std(tmp_vec)*4;
+% hold on
+% idx = find(tmp_vec > cutoff)
+% suspicious_traj = cellfun(@(v)v(2),{error_cell{idx}});
+% yline(cutoff)
+% hold off
+% 
+% tmp2 = cellfun(@(v)v(1),error_max_cell);
+% tmp2_vec = [tmp{:}];
+% % plot error max distribution
+% figure()
+% plot(sort(tmp2_vec))
+% cutoff = mean(tmp2_vec) + std(tmp2_vec)*4;
+% hold on
+% idx2 = find(tmp2_vec > cutoff)
+% tmp_cell = cellfun(@(v)v(2),{error_max_cell{idx2}});
+% suspicious_traj(end+1:end+length(tmp_cell)) = tmp_cell;
+% 
+% yline(cutoff)
+% hold off
+% suspicious_traj{1}
+% suspicious_traj{2}
+% while i <= length(suspicious_traj)
+% 
+%     if sum(cellfun(@isequal,suspicious_traj, repmat(suspicious_traj(i),1, length(suspicious_traj)))) > 1
+%         suspicious_traj(i) = [];
+%     end
+%     i = i +1 ;
+% end
+% % for some odd reason, they are exactly the same.. 
+% % plot suspicious trials
+% for i = 1:length(suspicious_traj)
+%     figure()
+% plot_trigger_on_traj(eeg_struct, track_data, suspicious_traj{i}(1), suspicious_traj{i}(3), suspicious_traj{i}(2), true)
+% title(strcat(["Traj and Pursuit of subject", suspicious_traj{i}(1), ...
+%     ", trial ", suspicious_traj{i}(2), ", task ", suspicious_traj{i}(3)]));
+% end
+% for i = 1:length(suspicious_traj)
+%     figure()
+% plot_trigger_on_traj(eeg_struct, track_data, suspicious_traj{i}(1), suspicious_traj{i}(3), suspicious_traj{i}(2), true)
+% title(strcat(["Traj and Pursuit of subject", suspicious_traj{i}(1), ...
+%     ", trial ", suspicious_traj{i}(2), ", task ", suspicious_traj{i}(3)]));
+% end
+% looks like it starts to get really weird at 1.5
+% trials to exclude: 
+% subject, task, trial
+[24, 2, 64];
+[18, 2, 1];
+[16, 2, 70];
 
 %% Replace Constant Traj Trigger from .vmrk with calculated from .npz
 
