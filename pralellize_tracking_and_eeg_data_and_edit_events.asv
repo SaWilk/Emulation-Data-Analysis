@@ -418,7 +418,7 @@ PROMINENCE_TRHESH = 0.01;
 
 for s = 1:size(eeg_struct,2)
 
-    event = eeg_struct(s).track_event;
+    event = eeg_struct(s).event;
     if ~strcmp(NOLATENCIES, eeg_struct(s).subject)
         for task = 1:2
             % get eeg triggers of current task
@@ -581,8 +581,8 @@ for s = unique(sort(rem_trials(:,1)))' % took me half an hour, but for loops loo
             cur_trial = cur_task([cur_task.trial_number] == t);
 
             for d = 1:size({cur_trial.type},2)
-                cur_trial(d).type = 'DEL';
-                cur_trial(d).code = 'bad_trial';
+                cur_trial(d).type = {'DEL'};
+                cur_trial(d).code = {'bad_trial'};
             end
 
             cur_task([cur_task.trial_number] == t) = cur_trial;
