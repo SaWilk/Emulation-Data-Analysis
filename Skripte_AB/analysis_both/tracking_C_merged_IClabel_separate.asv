@@ -31,6 +31,7 @@ cd(inputpath);
 
 % set export directory
 savepath_IClabel = "R:\AG-Beste-Studien\Emulation\06_analysis\output_ICA_combined_new\02_IClabel";  
+
 savepath_epoched = "R:\AG-Beste-Studien\Emulation\06_analysis\output_ICA_combined_new\03_epoched"; 
 savepath_no_practice = "R:\AG-Beste-Studien\Emulation\06_analysis\output_ICA_combined_new\03_b_epoched_no_practice";
 savepath_baseline = "R:\AG-Beste-Studien\Emulation\06_analysis\output_ICA_combined_new\04_baseline"; 
@@ -128,6 +129,7 @@ for ind = 1:length(filenames)
             marker_index = marker_index + 1;
         end
     end
+
     % extract event index for this marker in event structure
     event_index = 1;
     found = false;

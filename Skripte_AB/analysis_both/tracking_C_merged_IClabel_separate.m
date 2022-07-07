@@ -33,6 +33,7 @@ cd(inputpath);
 savepath_IClabel = "R:\AG-Beste-Studien\Emulation\06_analysis\output_ICA_combined_new\02_IClabel";  
 savepath_epoched = "R:\AG-Beste-Studien\Emulation\06_analysis\output_ICA_combined_new\03_epoched"; 
 savepath_no_practice = "R:\AG-Beste-Studien\Emulation\06_analysis\output_ICA_combined_new\03_b_epoched_no_practice";
+
 savepath_baseline = "R:\AG-Beste-Studien\Emulation\06_analysis\output_ICA_combined_new\04_baseline"; 
 savepath_artifactrej = "R:\AG-Beste-Studien\Emulation\06_analysis\output_ICA_combined_new\05_artifact_rejection"; 
 
@@ -97,6 +98,7 @@ for ind = 1:length(filenames)
         TMPEEG = pop_saveset(TMPEEG,'filename',TMPEEG.setname,'filepath', char(savepath_IClabel));
     end
 
+
     %% separate datasets & epochs
     
     %epoch continuous data for constant and random traj and save as
@@ -105,6 +107,7 @@ for ind = 1:length(filenames)
     TMPEEG_A.comment = TMPEEG_A.comment + "  *** epoch for traj parts";
     TMPEEG_A.setname = [filename '_icaclean_epoched_A'];
     TMPEEG_A = pop_saveset(TMPEEG_A, 'filename', TMPEEG_A.setname, 'filepath', char(savepath_epoched));
+
 
     %epoch continuous data for occlusion/ non-occlusion and save as
     %TMPEEG_B
@@ -175,6 +178,7 @@ for ind = 1:length(filenames)
     TMPEEG_B.setname = [filename '_epoched_nopractice_B'];
     TMPEEG_B = pop_saveset(TMPEEG_B, 'filename', TMPEEG_B.setname, 'filepath', char(savepath_no_practice));
 
+
     %% apply baseline correction and save
 
     TMPEEG_A = pop_rmbase(TMPEEG_A, [-1000 0] ,[]);
@@ -182,10 +186,12 @@ for ind = 1:length(filenames)
     TMPEEG_A.setname = [filename '_complete_preprocessing_A'];
     TMPEEG_A = pop_saveset(TMPEEG_A, 'filename', TMPEEG_A.setname, 'filepath', char(savepath_baseline));
 
+
     TMPEEG_B = pop_rmbase(TMPEEG_B, [-1000 0] ,[]);
     TMPEEG_B.comment = TMPEEG_B.comment + "  *** apply baseline corr";
     TMPEEG_B.setname = [filename '_complete_preprocessing_B'];
     TMPEEG_B = pop_saveset(TMPEEG_B, 'filename', TMPEEG_B.setname, 'filepath', char(savepath_baseline));
+
 
     %% artifact rejection and save
     
@@ -198,9 +204,11 @@ for ind = 1:length(filenames)
     TMPEEG_A.setname = [filename '_complete_preprocessing_withAR_A'];
     TMPEEG_A = pop_saveset(TMPEEG_A, 'filename', TMPEEG_A.setname, 'filepath', char(savepath_artifactrej));
 
+
     TMPEEG_B = pop_jointprob(TMPEEG_B, 1, 1:TMPEEG_B.nbchan, 5, 5, 0, 1);
     TMPEEG_B.comment = TMPEEG_B.comment + "  *** apply artifact rejection";
     TMPEEG_B.setname = [filename '_complete_preprocessing_withAR_B'];
     TMPEEG_B = pop_saveset(TMPEEG_B, 'filename', TMPEEG_B.setname, 'filepath', char(savepath_artifactrej));
+
 
 end
