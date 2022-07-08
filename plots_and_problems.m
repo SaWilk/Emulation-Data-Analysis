@@ -41,42 +41,56 @@ plot_trigger_on_traj(ALLEEG, track_data, s, t, task)
 % duration of the gap array. It is 30 points times upsampling factor before 
 % % constant and after. Put some trials in a subplot to check
 
+
 %% Trial Rejection 
 
-% Requires that parallelize tracking and eeg data is loaded. 
+% Requires that parallelize tracking and eeg data is loaded!
 
 % Visual artifact rejection 
 
-tmp = cellfun(@(v)v(1),error_cell);
-tmp_vec = [tmp{:}];
-% [val, idx] = maxk(tmp_vec,10);
 
-% check sope of error distribitopn
+% for the mean values:
+
+% get the actual error values
+tmp = cellfun(@(v)v(1),error_cell);
+% save as vector
+tmp_vec = [tmp{:}];
+
+
 % plot error distribution
 figure()
 plot(sort(tmp_vec))
+% define cutoff value 
 cutoff = mean(tmp_vec) + std(tmp_vec)*3.5;
 hold on
-idx = find(tmp_vec > cutoff)
-suspicious_traj = cellfun(@(v)v(2),{error_cell{idx}});
 yline(cutoff)
 hold off
+% get indices of all values above cutoff
+idx = find(tmp_vec > cutoff)
+suspicious_traj = cellfun(@(v)v(2),{error_cell{idx}});
 
+
+% for the maximum values:
+
+% get the actual error values
 tmp2 = cellfun(@(v)v(1),error_max_cell);
+% save as vector
 tmp2_vec = [tmp2{:}];
 % plot error max distribution
 figure()
 plot(sort(tmp2_vec))
+% define cutoff value 
 cutoff = mean(tmp2_vec) + std(tmp2_vec)*3.5;
 hold on
+% get indices of all values above cutoff
 idx2 = find(tmp2_vec > cutoff)
 tmp_cell = cellfun(@(v)v(2),{error_max_cell{idx2}});
 suspicious_traj(end+1:end+length(tmp_cell)) = tmp_cell;
-
 yline(cutoff)
 hold off
-suspicious_traj{1}
-suspicious_traj{2}
+
+
+% remove duplicate entries in suspicious_traj
 while i <= length(suspicious_traj)
 
     if sum(cellfun(@isequal,suspicious_traj, repmat(suspicious_traj(i),1, length(suspicious_traj)))) > 1
@@ -84,7 +98,7 @@ while i <= length(suspicious_traj)
     end
     i = i +1 ;
 end
-% for some odd reason, they are exactly the same.. 
+
 % plot suspicious trials
 for i = 1:length(suspicious_traj)
     figure()
@@ -117,8 +131,6 @@ for i = [1:5, 21:25, 65:70]
     ", trial ", i, ", task ", 2]));
 end
 
-% % looks like it starts to get really weird at 1.5
-
 % % trials to exclude: 
 % % subject, task, trial
 [24, 2, 46];
@@ -138,6 +150,7 @@ end
 [16, 2, 70];
 [18, 2, 20];
 % all of subject 18 task B
+%all the trials in which joystick was dislocated. 
 
 
 
