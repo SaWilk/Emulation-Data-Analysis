@@ -4,12 +4,12 @@
 % Author: Saskia Wilken
 
 % this script reads in tracking data, upsamples it, calculates tracking
-% error, loads in preprocessed continuous EEG files, imputes peak and end 
+% error, loads in preprocessed continuous EEG files, imputes peak and end
 % trial triggers in the event structure field, removes practice trial
-% % triggers and adds a field with the trial number, the task, the trial 
+% % triggers and adds a field with the trial number, the task, the trial
 % % latency and the trial latency in ms to the event structure. It rejects
-% trials that contain artifactually high tracking error. It saves eeglab 
-% .sets that contain the new event field and a .mat file that contains 
+% trials that contain artifactually high tracking error. It saves eeglab
+% .sets that contain the new event field and a .mat file that contains
 % the tracking data that contain the tracking data.
 
 
@@ -182,13 +182,13 @@ files2read = {dir('*.set').name};
 % Was for separating a and b task files.
 % files2read_a = files2read(~cellfun(@isempty, regexp(files2read,'_A_')));
 
-EEG = pop_loadset('filename',files2read);
+EEG = pop_loadset('filename', files2read);
 [ALLEEG, EEG, CURRENTSET] = eeg_store( ALLEEG, EEG, 0 );
 eeg_struct = ALLEEG;
 
 
-%% Put Tracking and EEG Data in the same structure / or actually, just 
-% remove subjects that have no corresponding eeg data. 
+%% Put Tracking and EEG Data in the same structure / or actually, just
+% remove subjects that have no corresponding eeg data.
 
 % all_data_struct = eeg_struct;
 
@@ -266,7 +266,7 @@ for s = 1:size(eeg_struct,2)
     % close to one another without a trial in between. Will delete them
     % manually.
     if strcmp(eeg_struct(s).subject, 'ZV583')
-        % identify trial number. 
+        % identify trial number.
         % [val, idx] = min(diff(find(strcmp({event.type}, 'S 12'))))
         event(688:689)= [];
     end
@@ -382,7 +382,7 @@ for s = 1:size(eeg_struct,2)
             [event(trial_starts(idx):trial_ends(idx)).trial_latency] = trial_event_latencies_cell{:};
             % add field: trial number
             if idx <= 72
-            trial_num = idx;
+                trial_num = idx;
             elseif 72 < idx <= 72*2
                 trial_num = idx - 72;
             else
@@ -414,6 +414,8 @@ end
 
 % "S 40": Peak
 
+PROMINENCE_TRHESH = 0.01;
+
 for s = 1:size(eeg_struct,2)
 
     event = eeg_struct(s).track_event;
@@ -432,8 +434,11 @@ for s = 1:size(eeg_struct,2)
                 current_trial_traj = track_data(s).upsamp_data.(task_names{task})(t).traj_y;
 
                 % get peak indices within trial trajectory data
-                [~, index_max_traj] = findpeaks(current_trial_traj);
-                [~, index_min_traj] = findpeaks(-current_trial_traj);
+                [~, index_max_traj, ~, prom_max_traj] = findpeaks(current_trial_traj);
+                [~, index_min_traj, ~, prom_min_traj] = findpeaks(-current_trial_traj);
+
+                index_max_traj = index_max_traj(prom_max_traj > PROMINENCE_TRHESH);
+                index_min_traj = index_min_traj(prom_min_traj > PROMINENCE_TRHESH);
 
                 % locate current trial in eeg event
                 cur_trial_idx = find([event_cur_task.trial_number] == t);
@@ -515,81 +520,97 @@ eeg_struct = rmfield(eeg_struct, ["track_event", "track_event_peaks"]);
 
 %% Reject Trials Behaviorally
 
-% extra column in events with exclude 1 or 0 
+% extra column in events with exclude 1 or 0
+clear joystick_moved_at_0
 count = 1;
+count2 = 1;
 for s = 1:length(subj_ids)
     for task = 1:2
         for t = 1:size(track_data(s).trials.(task_names{task}), 2)
-%             error_cell{s}{task}{t} = track_data(s).upsamp_data.(task_names{task})(t).error;
+            %             error_cell{s}{task}{t} = track_data(s).upsamp_data.(task_names{task})(t).error;
             cur_mean_errors = track_data(s).upsamp_data.(task_names{task})(t).mean_error;
-            cur_max_errors = max(track_data(s).upsamp_data.(task_names{task})(t).error);
+            cur_error = track_data(s).upsamp_data.(task_names{task})(t).error;
+            cur_max_errors = max(cur_error);
             which_error = [s, task, t];
             error_max_cell{count} = {cur_max_errors, which_error};
             error_cell{count} = {cur_mean_errors, which_error};
+            if cur_error(1) > 0.2;
+                joystick_moved_at_0{count2} = which_error;
+                count2 = count2 + 1;
+            end
             count = count + 1;
         end
     end
 end
 
-% Visual artifact rejection 
 
-% tmp = cellfun(@(v)v(1),error_cell);
-% tmp_vec = [tmp{:}];
-% % [val, idx] = maxk(tmp_vec,10);
-% 
-% % check sope of error distribitopn
-% % plot error distribution
-% figure()
-% plot(sort(tmp_vec))
-% cutoff = mean(tmp_vec) + std(tmp_vec)*4;
-% hold on
-% idx = find(tmp_vec > cutoff)
-% suspicious_traj = cellfun(@(v)v(2),{error_cell{idx}});
-% yline(cutoff)
-% hold off
-% 
-% tmp2 = cellfun(@(v)v(1),error_max_cell);
-% tmp2_vec = [tmp{:}];
-% % plot error max distribution
-% figure()
-% plot(sort(tmp2_vec))
-% cutoff = mean(tmp2_vec) + std(tmp2_vec)*4;
-% hold on
-% idx2 = find(tmp2_vec > cutoff)
-% tmp_cell = cellfun(@(v)v(2),{error_max_cell{idx2}});
-% suspicious_traj(end+1:end+length(tmp_cell)) = tmp_cell;
-% 
-% yline(cutoff)
-% hold off
-% suspicious_traj{1}
-% suspicious_traj{2}
-% while i <= length(suspicious_traj)
-% 
-%     if sum(cellfun(@isequal,suspicious_traj, repmat(suspicious_traj(i),1, length(suspicious_traj)))) > 1
-%         suspicious_traj(i) = [];
-%     end
-%     i = i +1 ;
-% end
-% % for some odd reason, they are exactly the same.. 
-% % plot suspicious trials
-% for i = 1:length(suspicious_traj)
-%     figure()
-% plot_trigger_on_traj(eeg_struct, track_data, suspicious_traj{i}(1), suspicious_traj{i}(3), suspicious_traj{i}(2), true)
-% title(strcat(["Traj and Pursuit of subject", suspicious_traj{i}(1), ...
-%     ", trial ", suspicious_traj{i}(2), ", task ", suspicious_traj{i}(3)]));
-% end
-% for i = 1:length(suspicious_traj)
-%     figure()
-% plot_trigger_on_traj(eeg_struct, track_data, suspicious_traj{i}(1), suspicious_traj{i}(3), suspicious_traj{i}(2), true)
-% title(strcat(["Traj and Pursuit of subject", suspicious_traj{i}(1), ...
-%     ", trial ", suspicious_traj{i}(2), ", task ", suspicious_traj{i}(3)]));
-% end
-% looks like it starts to get really weird at 1.5
-% trials to exclude: 
-% subject, task, trial
-[24, 2, 64];
-[18, 2, 1];
-[16, 2, 70];
+% % trials to exclude:
+% % subject, task, trial
+% [24, 2, 46];
+% [16, 2, 70];
+% [30, 2, 2];
+% [19, 1, 22];
+% [3, 2, 38];
+% [2, 1, 53];
+% [20, 2, 40];
+% [20, 2, 10];
+% [17, 1, 20];
+% [17, 1, 19];
+% [16, 2, 70];
+% [18, 2, :];
+% check subj 18 and 17
+% as well as all trials where the joystick was moved more than 0.2 of the
+% screen off the center.
+rem_trials = [[24, 2, 46];[16, 2, 70];[30, 2, 2];[19, 1, 22];[3, 2, 38];[2, 1, 53];...
+    [20, 2, 40];[20, 2, 10];[17, 1, 20];[17, 1, 19];[16, 2, 70]];
+all_trials_18 = [1:72]';
+all_trials_18 = [repmat([18, 2], size(all_trials_18,1), 1),all_trials_18];
+rem_trials(end+1:end+size(all_trials_18,1), :) = all_trials_18;
+tmp = cell2mat(joystick_moved_at_0');
+rem_trials(end+1:end+size(tmp,1), :) = tmp;
+
+clear cur_subj cur_task cur_trial
+
+for s = unique(sort(rem_trials(:,1)))' % took me half an hour, but for loops loop through the columns... duh!
+    for task = unique(sort(rem_trials(s == rem_trials(:,1), 2)))'
+        for t = rem_trials(s == rem_trials(:,1) & task == rem_trials(:,2), 3)'
+
+            % delete the eeg events
+            cur_subj = eeg_struct(s).event;
+            cur_task = cur_subj(strcmp({cur_subj.task}, task_names{task}));
+            cur_trial = cur_task([cur_task.trial_number] == t);
+
+            for d = 1:size({cur_trial.type},2)
+                cur_trial(d).type = 'DEL';
+                cur_trial(d).code = 'bad_trial';
+            end
+
+            cur_task([cur_task.trial_number] == t) = cur_trial;
+            cur_subj(strcmp({cur_subj.task}, task_names{task})) = cur_task;
+            %             for f = 1:length(field_names)
+            %                 {eeg_struct(s).event.(field_names{f})} = {cur_subj.(field_names{f})};
+            %             end
+            eeg_struct(s).event = cur_subj;
+            clear cur_subj cur_task cur_trial
+
+            % delete the tracking trials
+            cur_subj = track_data(s);
+            cur_task = cur_subj.upsamp_data.(task_names{task});
+            cur_trial = cur_task(t);
+            field_names = fieldnames(cur_trial);
+            for f = 1:length(field_names)
+                cur_trial.(field_names{f}) = nan(length(cur_trial.(field_names{f})), 1);
+            end
+            cur_task(t) = cur_trial;
+            cur_subj.upsamp_data.(task_names{task}) = cur_task;
+            track_data(s) = cur_subj;
+
+            clear cur_subj cur_task cur_trial
+
+        end
+    end
+end
+
 
 %% Replace Constant Traj Trigger from .vmrk with calculated from .npz
 
@@ -605,8 +626,6 @@ end
 
 %% Save sets
 
-% This does not work... :(
-% go over this
 % https://eeglab.org/tutorials/ConceptsGuide/Data_Structures.html
 
 out_path = strcat([file_path, '\01_merged_data\']);
