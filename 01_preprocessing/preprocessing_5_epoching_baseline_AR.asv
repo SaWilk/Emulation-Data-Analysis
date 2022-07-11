@@ -93,24 +93,24 @@ for ind = 1:length(file_names)
     TMPEEG_A = pop_epoch( TMPEEG, event_A , epoch_lims_A, 'newname', [TMPEEG.setname '_A_epoched'], 'epochinfo', 'yes');
     TMPEEG_A.comment = TMPEEG_A.comment + "  *** epoch for traj parts";
     TMPEEG_A.setname = [set_name '_epoched_A.set'];
-    TMPEEG_A = pop_saveset(TMPEEG_A, 'filename', TMPEEG_A.setname, 'filepath', char(subdir_const_rand));
+    TMPEEG_A = pop_saveset(TMPEEG_A, 'file_name', TMPEEG_A.setname, 'filepath', char(subdir_const_rand));
     % remove baseline
     TMPEEG_A = pop_rmbase(TMPEEG_A, base_lims_A ,[]);
     TMPEEG_A.comment = TMPEEG_A.comment + "  *** apply baseline corr";
     TMPEEG_A.setname = [set_name '_complete_preprocessing_A.set'];
-    TMPEEG_A = pop_saveset(TMPEEG_A, 'filename', TMPEEG_A.setname, 'filepath', char(savepath_baseline_const_rand));
+    TMPEEG_A = pop_saveset(TMPEEG_A, 'file_name', TMPEEG_A.setname, 'filepath', char(savepath_baseline_const_rand));
 
     %epoch continuous data for occlusion/ non-occlusion and save as
     %TMPEEG_B
     TMPEEG_B = pop_epoch(TMPEEG, event_B , epoch_lims_B, 'newname', [TMPEEG.setname '_B_epoched'], 'epochinfo', 'yes');
     TMPEEG_B.comment = TMPEEG_B.comment + "  *** epoch for occl parts";
     TMPEEG_B.setname = [set_name '_epoched_B.set'];
-    TMPEEG_B = pop_saveset(TMPEEG_B, 'filename', TMPEEG_B.setname, 'filepath', char(subdir_occl));
+    TMPEEG_B = pop_saveset(TMPEEG_B, 'file_name', TMPEEG_B.setname, 'filepath', char(subdir_occl));
     % remove baseline
     TMPEEG_B = pop_rmbase(TMPEEG_B, base_lims_B ,[]);
     TMPEEG_B.comment = TMPEEG_B.comment + "  *** apply baseline corr";
     TMPEEG_B.setname = [set_name '_complete_preprocessing_B.set'];
-    TMPEEG_B = pop_saveset(TMPEEG_B, 'filename', TMPEEG_B.setname, 'filepath', char(savepath_baseline_occl));
+    TMPEEG_B = pop_saveset(TMPEEG_B, 'file_name', TMPEEG_B.setname, 'filepath', char(savepath_baseline_occl));
 
     % epoch for peaks & remove baseline 
     TMPEEG_peaks = pop_epoch(TMPEEG, { event_peaks }, epoch_lims_peaks, 'newname', TMPEEG.subject, 'epochinfo', 'yes');
@@ -118,8 +118,8 @@ for ind = 1:length(file_names)
     TMPEEG_peaks = pop_rmbase(TMPEEG_peaks, base_lims_peaks);
     event_idx = find(strcmp({TMPEEG_peaks.event.type}, event_peaks));
     % save epoched, baseline-corrected data
-    TMPEEG_peaks.setname = strjoin([set_name, "_epoched_peaks.set"],"");
-    TMPEEG_peaks.setname = pop_saveset(TMPEEG_peaks, 'filename', TMPEEG_peaks.setname, 'filepath', char(subdir_peaks));
+    file_name = strjoin([TMPEEG.subject, "_epoched_peaks"],"");
+    TMPEEG = pop_saveset(TMPEEG, 'file_name', file_name, 'filepath', char(subdir_peaks));
 
 
     %% artifact rejection
@@ -134,12 +134,12 @@ for ind = 1:length(file_names)
 
     TMPEEG_B = pop_jointprob(TMPEEG_B, 1, 1:TMPEEG_B.nbchan, 5, 5, 0, 1);
     TMPEEG_B.comment = TMPEEG_B.comment + "  *** apply artifact rejection";
-    TMPEEG_B.setname = [set_name '_complete_preprocessing_withAR_B'];
+    TMPEEG_B.setname = [file_name '_complete_preprocessing_withAR_B'];
 %     TMPEEG_B = pop_saveset(TMPEEG_B, 'file_name', TMPEEG_B.setname, 'filepath', char(output_dir_AR));
 
     TMPEEG_peaks = pop_jointprob(TMPEEG_peaks, 1, 1:TMPEEG_peaks.nbchan, 5, 5, 0 ,1);
     TMPEEG_peaks.comment = TMPEEG_peaks.comment + "  *** apply artifact rejection";
-    TMPEEG_peaks.setname = [set_name '_complete_preprocessing_withAR_peaks'];
+    TMPEEG_peaks.setname = [file_name '_complete_preprocessing_withAR_peaks'];
 %     TMPEEG_peaks = pop_saveset(TMPEEG_peaks, 'file_name', TMPEEG_B.setname, 'filepath', char(output_dir_AR));
 
 end

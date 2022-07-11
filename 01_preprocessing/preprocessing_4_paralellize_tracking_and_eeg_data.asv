@@ -34,17 +34,17 @@ file_path = matlab.desktop.editor.getActiveFilename;
 file_path = fileparts(file_path);
 addpath(file_path)
 % tracking data
-tmp_path = strsplit(file_path, '\');
-tmp_path((end-1):end) = [];
+parent_path = strsplit(file_path, filesep);
+parent_path((end-1):end) = [];
 % get root path to data folder
-track_data_path = strjoin([tmp_path, 'Emulation_Data_Input\00_npz_files'], '\');
+track_data_path = strjoin([parent_path, 'Emulation-Data-Input', '00_npz_files'], filesep);
 subj_paths = genpath(track_data_path); % generate subfolder paths
 subj_paths = strsplit(subj_paths, ";"); % split the string vector at ;
 subj_paths(1) = []; % remove top level entry
 subj_paths(end) = []; % remove final entry
 
 % eeg data
-eeg_data_path = [file_path, '\02_IClabel']; % get root path to data folder
+eeg_data_path = strjoin([parent_path, 'Emulation-Data-Output', '02_IClabel'], filesep); % get root path to data folder
 % contains raw and preprocessed folders
 
 % get subject ids from folder names
@@ -182,7 +182,8 @@ clear cur_traj cur_purs cur_err
 
 % now we need eeglab
 eeglab;
-cd(strcat(eeg_data_path, '\preprocessed\'));
+close all
+cd(eeg_data_path);
 % get all set files in the folder
 files2read = {dir('*.set').name};
 % only get files for a for now
@@ -627,19 +628,43 @@ end
 %calculate variance of difference
 %should be minimal at constant trajectory
 
-% [shift, start_ind, end_ind] = align_const_traj(const_traj, trial_traj);
-
-% TOOD: once you are done, tell Adriana
+% s = 1;
+% t = 2;
+% % add constant traj path to matlab path
+% tmp_path = strsplit(file_path, '\');
+% tmp_path(end) = [];
+% const_traj_path = [strjoin(tmp_path, '\'), '\functions'];
+% addpath(const_traj_path);
+% % load constant traj
+% const_traj_fix = load([const_traj_path, 'const_traj_fixed.mat']);
+% % upsample constant traj
+% % x
+% const_traj_fix_upsamp = linspace(const_traj_fix(1,1), const_traj_fix(end,1), round(length(const_traj_fix(:,1))/FR*SR))';
+% % y
+% const_traj_fix_upsamp(:,2) = spline(const_traj_fix(:,1), const_traj_fix(:,2), const_traj_fix_upsamp);
+% % plot(const_traj_fix_upsamp(:,1), const_traj_fix_upsamp(:,2))
+% 
+% for s = 1:length(subj_ids)
+%     for task = 1:2
+%         for t = 1:size(track_data(s).trials.(task_names{task}), 2)
+%             % load current trial of interest
+%             cur_trial = track_data(s).upsamp_data.(task_names{task})(t);
+%             cur_traj = [cur_trial.traj_x, cur_trial.traj_y];
+%             % use align_const_traj function to get new event latencies
+%             [shift, start_ind, end_ind] = align_to_const_traj(const_traj_fix_upsamp, cur_traj);
+%         end
+%     end
+% end
 
 
 %% Save sets
 
 % https://eeglab.org/tutorials/ConceptsGuide/Data_Structures.html
 
-out_path = strcat([file_path, '\01_merged_data\']);
+out_path = strjoin([parent_path, 'Emulation-Data-Out'03_parallelize_with_traj']);
 EEG_file_name_suffix = '_EEG';
 track_file_name_suffix = 'all_tracking_data.mat';
-C:\wilken\Emulation-Data-Analysis\01_preprocessing\03_parallelize_with_traj
+
 for s = 1:size(track_data, 2)
 
     file_name = strcat([eeg_struct(s).subject, EEG_file_name_suffix]);

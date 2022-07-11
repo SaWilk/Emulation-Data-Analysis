@@ -34,17 +34,17 @@ file_path = matlab.desktop.editor.getActiveFilename;
 file_path = fileparts(file_path);
 addpath(file_path)
 % tracking data
-tmp_path = strsplit(file_path, '\');
-tmp_path((end-1):end) = [];
+parent_path = strsplit(file_path, filesep);
+parent_path((end-1):end) = [];
 % get root path to data folder
-track_data_path = strjoin([tmp_path, 'Emulation_Data_Input\00_npz_files'], '\');
+track_data_path = strjoin([parent_path, 'Emulation-Data-Input', '00_npz_files'], filesep);
 subj_paths = genpath(track_data_path); % generate subfolder paths
 subj_paths = strsplit(subj_paths, ";"); % split the string vector at ;
 subj_paths(1) = []; % remove top level entry
 subj_paths(end) = []; % remove final entry
 
 % eeg data
-eeg_data_path = [file_path, '\02_IClabel']; % get root path to data folder
+eeg_data_path = strjoin([parent_path, 'Emulation-Data-Output', '02_IClabel'], filesep); % get root path to data folder
 % contains raw and preprocessed folders
 
 % get subject ids from folder names
@@ -182,6 +182,7 @@ clear cur_traj cur_purs cur_err
 
 % now we need eeglab
 eeglab;
+close all
 cd(eeg_data_path);
 % get all set files in the folder
 files2read = {dir('*.set').name};
@@ -660,7 +661,7 @@ end
 
 % https://eeglab.org/tutorials/ConceptsGuide/Data_Structures.html
 
-out_path = strcat([file_path, '\03_parallelize_with_traj\']);
+out_path = strjoin([parent_path, 'Emulation-Data-Output', '03_parallelize_with_traj'], filesep);
 EEG_file_name_suffix = '_EEG';
 track_file_name_suffix = 'all_tracking_data.mat';
 
