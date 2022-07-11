@@ -6,31 +6,43 @@
 
 % Adriana Böttcher
 % 23.06.22
-% changed 7.7.22: epoching etc. in separate script
 
+% update AB 7.7.22: epoching etc. in separate script
+
+% update AB 08/07/22: relative paths
 
 %% clear workspace
 clear;
 clc;
 
-%% folders and dependencies
+%% paths & dependencies
 
 % add path and start EEGlab toolbox
 addpath('R:\AG-Beste-Orga\Skripts\Toolbox\eeglab2021.0');
 eeglab;
 close;
 
+% file location
+file_path = matlab.desktop.editor.getActiveFilename;
+file_path = fileparts(file_path);
+addpath(file_path);
+
+% get data paths for parent dirs
+filepath_parts = strsplit(file_path, "\");
+parent_dir = filepath_parts(1:end-1);
+parent_dir = strjoin(parent_dir, "\");
+parent_dir_2 = filepath_parts(1:end-2);
+parent_dir_2 = strjoin(parent_dir_2, "\");
+
+% add functions in parent dir
+addpath([char(parent_dir) filesep char("functions")]);
+
 % set input path
-inputpath = "R:\AG-Beste-Studien\Emulation\06_analysis\output_ICA_combined_new\01_ICA";
+inputpath = [parent_dir_2 filesep "Emulation-Data-Output\01_ICA"];
 cd(inputpath);
 
 % set export directory
-savepath_IClabel = "R:\AG-Beste-Studien\Emulation\06_analysis\output_ICA_combined_new\02_IClabel";  
-savepath_epoched = "R:\AG-Beste-Studien\Emulation\06_analysis\output_ICA_combined_new\03_epoched"; 
-savepath_no_practice = "R:\AG-Beste-Studien\Emulation\06_analysis\output_ICA_combined_new\03_b_epoched_no_practice";
-
-savepath_baseline = "R:\AG-Beste-Studien\Emulation\06_analysis\output_ICA_combined_new\04_baseline"; 
-savepath_artifactrej = "R:\AG-Beste-Studien\Emulation\06_analysis\output_ICA_combined_new\05_artifact_rejection"; 
+savepath_IClabel = [parent_dir_2 filesep "Emulation-Data-Output\02_IClabel"];
 
 %list all *.set files in inputpath
 filenames = dir('*ICA_merged_new*.set');

@@ -18,24 +18,41 @@
 %updated AB 22/06/22
 %new paths
 
+% updated AB 11/07/22 
+% relative paths
+
 %% clear workspace
 clear;
 clc;
 
-% add path of custom functions
-addpath("R:\AG-Beste-Studien\Emulation\06_analysis\Emulation-Data-Analysis\Skripte_AB\analysis_both\functions");
+%% paths & dependencies
 
 % add path and start EEGlab toolbox
 addpath('R:\AG-Beste-Orga\Skripts\Toolbox\eeglab2021.0');
 eeglab;
 close;
 
-% set input path
-inputpath_B = "R:\AG-Beste-Studien\Emulation\06_analysis\output_analysis_task_B_new\01_preprocessed";
-inputpath_A = "R:\AG-Beste-Studien\Emulation\06_analysis\output_analysis_task_A_new\01_preprocessed";
+% file location
+file_path = matlab.desktop.editor.getActiveFilename;
+file_path = fileparts(file_path);
+addpath(file_path);
 
-% set export directory
-savepath = "R:\AG-Beste-Studien\Emulation\06_analysis\output_ICA_combined_new\01_ICA";  
+% get data paths for parent dirs
+filepath_parts = strsplit(file_path, "\");
+parent_dir = filepath_parts(1:end-1);
+parent_dir = strjoin(parent_dir, "\");
+parent_dir_2 = filepath_parts(1:end-2);
+parent_dir_2 = strjoin(parent_dir_2, "\");
+
+% add functions in parent dir
+addpath([char(parent_dir) filesep char("functions")]);
+
+% set input path
+inputpath_B = [parent_dir_2 filesep "Emulation-Data-Output\00_raw_to_EEGlab"];
+inputpath_A = [parent_dir_2 filesep "Emulation-Data-Output\00_raw_to_EEGlab"];
+
+% set output path
+savepath = [parent_dir_2 filesep "Emulation-Data-Output\01_ICA"];
 
 %list all *.set files in inputpath
 cd(inputpath_A);
@@ -46,7 +63,6 @@ filenames_B = dir('*preprocessed*.set');
 %concatenate into one cell array
 files2read_A = {filenames_A.name};
 files2read_B = {filenames_B.name};
-
 
 %% Loop through files
 % load data
