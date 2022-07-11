@@ -640,7 +640,7 @@ t = 2;
 const_traj_path = strcat([file_path, '\Skripte_AB\']);
 addpath(const_traj_path);
 % load constant traj
-const_traj_fix = load([const_traj_path, 'const_traj_fix.mat']);
+const_traj_fix = load([const_traj_path, 'const_traj_fixed.mat']);
 % upsample constant traj
 % x
 const_traj_fix_upsamp = linspace(const_traj_fix(1,1), const_traj_fix(end,1), round(length(const_traj_fix(:,1))/FR*SR))';
@@ -655,7 +655,7 @@ for s = 1:length(subj_ids)
             cur_trial = track_data(s).upsamp_data.(task_names{task})(t);
             cur_traj = [cur_trial.traj_x, cur_trial.traj_y];
             % use align_const_traj function to get new event latencies
-            [shift, start_ind, end_ind] = align_const_traj(const_traj_fix_upsamp, cur_traj);
+            [shift, start_ind, end_ind] = align_to_const_traj(const_traj_fix_upsamp, cur_traj);
         end
     end
 end
