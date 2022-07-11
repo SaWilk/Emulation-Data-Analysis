@@ -1,5 +1,5 @@
-%% Plots and Issues
-
+%% Tests and Tracking Data Artifact Rejection
+%
 % author: Saskia Wilken
 % creation date: 21.06.2022
 
