@@ -8,6 +8,9 @@
 % * remove bad epochs
 % * export data at different steps
 
+% Adriana Böttcher
+% 08.07.22
+
 %% clear workspace
 clear;
 clc;
@@ -38,6 +41,8 @@ addpath([char(parent_dir) filesep char("functions")]);
 input_dir = [parent_dir_2 filesep "Emulation-Data-Output\03_parallelize_with_traj"];
 output_dir = [parent_dir_2 filesep "Emulation-Data-Output\"];
 output_dir_epoched = [parent_dir_2 filesep "Emulation-Data-Output\04_epoched"];
+output_dir_baseline = [parent_dir_2 filesep "Emulation-Data-Output\05_baseline"];
+output_dir_AR = [parent_dir_2 filesep "Emulation-Data-Output\06_artifact_rejection"];
 
 subdir_const_rand = [output_dir_epoched filesep "const_rand"];
 subdir_occl = [output_dir_epoched filesep "occl_nonoccl"];
@@ -85,7 +90,6 @@ for ind = 1:length(filenames)
     TMPEEG_A.setname = [filename '_complete_preprocessing_A'];
     TMPEEG_A = pop_saveset(TMPEEG_A, 'filename', TMPEEG_A.setname, 'filepath', char(savepath_baseline));
 
-
     %epoch continuous data for occlusion/ non-occlusion and save as
     %TMPEEG_B
     TMPEEG_B = pop_epoch(TMPEEG, event_B , epoch_lims_B, 'newname', [TMPEEG.setname '_B_epoched'], 'epochinfo', 'yes');
@@ -107,7 +111,24 @@ for ind = 1:length(filenames)
     file_name = strcat([EEG.subject, "_epoched_peaks"]);
     EEG = pop_saveset(EEG, 'filename', file_name, 'filepath', char(subdir_peaks));
 
+    %% artifact rejection
+    %parameters: input, ICs (0) or EEG data (1), electrodes, thresholds in
+    %stdv for electrodes, global threshold for all electrodes, superpose
+    %prelabelling with previous labelling, keep (0) or reject (1) trials
 
+    TMPEEG_A = pop_jointprob(TMPEEG_A, 1, 1:TMPEEG_A.nbchan, 5, 5, 0, 1);
+    TMPEEG_A.comment = TMPEEG_A.comment + "  *** apply artifact rejection";
+    TMPEEG_A.setname = [filename '_complete_preprocessing_withAR_A'];
+%     TMPEEG_A = pop_saveset(TMPEEG_A, 'filename', TMPEEG_A.setname, 'filepath', char(output_dir_AR));
 
+    TMPEEG_B = pop_jointprob(TMPEEG_B, 1, 1:TMPEEG_B.nbchan, 5, 5, 0, 1);
+    TMPEEG_B.comment = TMPEEG_B.comment + "  *** apply artifact rejection";
+    TMPEEG_B.setname = [filename '_complete_preprocessing_withAR_B'];
+%     TMPEEG_B = pop_saveset(TMPEEG_B, 'filename', TMPEEG_B.setname, 'filepath', char(output_dir_AR));
+
+    TMPEEG_peaks = pop_jointprob(TMPEEG_peaks, 1, 1:TMPEEG_peaks.nbchan, 5, 5, 0 ,1);
+    TMPEEG_peaks.comment = TMPEEG_peaks.comment + "  *** apply artifact rejection";
+    TMPEEG_peaks.setname = [filename '_complete_preprocessing_withAR_peaks'];
+%     TMPEEG_peaks = pop_saveset(TMPEEG_peaks, 'filename', TMPEEG_B.setname, 'filepath', char(output_dir_AR));
 
 end
