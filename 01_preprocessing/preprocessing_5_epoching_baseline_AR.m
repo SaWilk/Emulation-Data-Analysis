@@ -100,7 +100,7 @@ for ind = 1:length(file_names)
     TMPEEG_A.setname = [set_name '_complete_preprocessing_A.set'];
     TMPEEG_A = pop_saveset(TMPEEG_A, 'filename', TMPEEG_A.setname, 'filepath', char(savepath_baseline_const_rand));
 
-if ~strcmp(TMPEEG_A.subject, ) % skip subject 18 Task B cause it is only bad trials
+if ~strcmp(TMPEEG_A.subject, 'KMY6K') % skip subject 18 Task B cause it is only bad trials
     %epoch continuous data for occlusion/ non-occlusion and save as
     %TMPEEG_B
     TMPEEG_B = pop_epoch(TMPEEG, event_B , epoch_lims_B, 'newname', [TMPEEG.setname '_B_epoched'], 'epochinfo', 'yes');

@@ -151,6 +151,8 @@ track_data_path = strjoin([grandparent_dir, "Emulation-Data-Output", "03_paralle
 cd(track_data_path);
 load(char({dir('*.mat').name})); % loads track_data
 
+figure()
 plot_trigger_on_traj(TMPEEG, track_data, 1, 40, 2, true)
-plot_trigger_on_traj(eeg_struct, track_data, 18, 40, 2, true)
+figure()
+plot_trigger_on_traj(eeg_struct, track_data, 3, 40, 2, true)
 
