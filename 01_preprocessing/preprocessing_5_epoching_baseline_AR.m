@@ -3,7 +3,7 @@
 
 % This script contains: 
 % * separating the data for both tasks by:
-% epoching based on respective events
+% epoching based on respective eventsdeleted plots and problems
 % * baseline correction
 % * remove bad epochs
 % * export data at different steps
@@ -119,7 +119,7 @@ for ind = 1:length(file_names)
     event_idx = find(strcmp({TMPEEG_peaks.event.type}, event_peaks));
     % save epoched, baseline-corrected data
     TMPEEG_peaks.setname = strjoin([set_name, "_epoched_peaks.set"],"");
-    TMPEEG_peaks.setname = pop_saveset(TMPEEG_peaks, 'filename', TMPEEG_peaks.setname, 'filepath', char(subdir_peaks));
+    TMPEEG_peaks.setname = pop_saveset(TMPEEG_peaks, 'filename', char(TMPEEG_peaks.setname), 'filepath', char(subdir_peaks));
 
 
     %% artifact rejection
