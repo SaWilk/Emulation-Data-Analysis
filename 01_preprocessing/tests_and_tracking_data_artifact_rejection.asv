@@ -145,12 +145,10 @@ end
 file_path = matlab.desktop.editor.getActiveFilename;
 file_path = fileparts(file_path);
 filepath_parts = strsplit(file_path, filesep);
-grandparent_dir = filepath_parts(1:end-2);
-grandparent_dir = strjoin(grandparent_dir, filesep);
-track_data_path = strjoin([grandparent_dir, "Emulation-Data-Output", "03_parallelize_with_traj"], filesep);
-cd(track_data_path);
-load(char({dir('*.mat').name})); % loads track_data
+parent_dir = filepath_parts(1:end-1);
+parent_dir = strjoin(parent_dir, filesep);
+track_data_path = strjoin([parent_dir, "Emulation-Data-Output', '03_parallelize_with_traj'], filesep);
+load()
 
-plot_trigger_on_traj(TMPEEG, track_data, 1, 40, 2, true)
-plot_trigger_on_traj(eeg_struct, track_data, 18, 40, 2, true)
+
 
