@@ -27,7 +27,6 @@ subplot(2,1,2)
 plot(tmp_traj(:,1), tmp_traj(:,2), "linewidth", 1.5)
 
 
-
 %% Test Plot Peaks Triggers
 
 s = 5
