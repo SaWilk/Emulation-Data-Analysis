@@ -20,7 +20,7 @@ clc;
 %% folders and dependencies
 
 % add path and start EEGlab toolbox
-% addpath('R:\AG-Beste-Orga\Skripts\Toolbox\eeglab2021.0');
+addpath('R:\AG-Beste-Orga\Skripts\Toolbox\eeglab2021.0');
 eeglab;
 close;
 
