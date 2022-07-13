@@ -63,6 +63,11 @@ output_dir_AR_peaks_medium = strjoin([output_dir_AR, 'peaks_-750_500'], filesep)
 output_dir_AR_peaks_short = strjoin([output_dir_AR, 'peaks_-500_250'], filesep);
 output_dir_AR_peaks_long = strjoin([output_dir_AR, 'peaks_-1000_750'], filesep);
 
+mean_matrices_path = strjoin([output_dir, 'mean_matrices'], filesep);
+mkdir(mean_matrices_path);
+mean_matrices_peaks_epoched_path = strjoin([mean_matrices_path, 'peaks'], filesep);
+mkdir(mean_matrices_peaks_epoched_path);
+
 
 %% Load Epoched data 
 
@@ -131,12 +136,27 @@ end
 
 %% Save the Mean Matrices for Convenient Loading TODO
 
-save()
+cd(mean_matrices_peaks_epoched_path)
+save("mean_struct_long.mat", 'mean_struct_long')
+save("mean_struct_medium.mat", 'mean_struct_medium')
+save("mean_struct_short.mat", 'mean_struct_short')
+
+
+%% Load Previously Generated Mean Structures
+
+load('mean_struct_short.mat')
+load('mean_struct_medium.mat')
+load('mean_struct_long.mat')
+
 
 %% Plot ERPs as grand average
 
 neg_time = 60; 
 avg_peak_dist = 300;
+
+short_mean = mean(mean_struct_short.all(:,:,:),3);
+medium_mean = mean(mean_struct_medium.all(:,:,:),3);
+long_mean = mean(mean_struct_long.all(:,:,:),3);
 
 % Average ERP Plots
 
@@ -144,7 +164,6 @@ figure()
 % short epochs
 subplot(3, 1, 1)
 
-short_mean = mean(mean_struct_short.all(:,:,:),3);
 [epoch_lims(1), epoch_lims(2)] = bounds(epochs_short(8).times)
 plot(mean_struct_short.all_time_vec, short_mean);
 title(strcat(['ERP of all subjects averaged across epochs around peaks, n ~= ', num2str( size(epochs_short(1).data,3)), ' per subject']));
@@ -160,7 +179,6 @@ hold off
 %medium epochs
 subplot(3, 1, 2)
 
-medium_mean = mean(mean_struct_medium.all(:,:,:),3);
 [epoch_lims(1), epoch_lims(2)] = bounds(epochs_medium(8).times)
 plot(mean_struct_medium.all_time_vec, medium_mean);
 title(strcat(['ERP of all subjects averaged across epochs around peaks, n ~= ', num2str( size(epochs_medium(1).data,3)), ' per subject']));
@@ -176,7 +194,6 @@ hold off
 % long epocjs
 subplot(3, 1, 3)
 
-long_mean = mean(mean_struct_long.all(:,:,:),3);
 [epoch_lims(1), epoch_lims(2)] = bounds(epochs_long(8).times)
 plot(mean_struct_long.all_time_vec, long_mean);
 title(strcat(['ERP of all subjects averaged across epochs around peaks, n ~= ', num2str( size(epochs_long(1).data,3)), ' per subject']));
@@ -251,10 +268,30 @@ hold off
 
 %% Create Topoplot of the time points of interest TODO
 
-MEAN = mean(mean_struct.all,3);
-topoplot(mean(MEAN(:,neg_time)), EEG.chanlocs)
-neg_time  = 60/4
+latencies = linspace(-100, 250, 8);
+% TODO: Display all topoplots in the same color range
+figure()
+for i = 1:length(latencies)
+    [~, lat_idx] = min(abs(mean_struct_long.all_time_vec - latencies(i)));
 
+    subplot(2, 4, i)
+    plottie = topoplot(long_mean(:,lat_idx), EEG.chanlocs)
+    title('epochs around peaks all subjects all trials, long epochs')
+    subtitle(strcat(['latency: ', num2str(latencies(i)), ' ms relative to peak' ]))
+%     cbar('minmax', [-0.1, 0.1])
+end
+cbar
+
+figure()
+for i = 1:length(latencies)
+    [~, lat_idx] = min(abs(mean_struct_medium.all_time_vec - latencies(i)));
+
+    subplot(2, 4, i)
+    topoplot(medium_mean(:,lat_idx), EEG.chanlocs)
+    title('epochs around peaks all subjects all trials, long epochs')
+    subtitle(strcat(['latency: ', num2str(latencies(i)), ' ms relative to peak' ]))
+    colorbar()
+end
 
 %% Create ERP Plot of the data TODO
 
