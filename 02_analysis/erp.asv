@@ -53,23 +53,24 @@ output_dir_AR_const = strjoin([output_dir_AR, 'const'], filesep);
 output_dir_AR_occl = strjoin([output_dir_AR, 'occl'], filesep);
 output_dir_AR_peaks = strjoin([output_dir_AR, 'peaks'], filesep);
 
-
-
-
-%% Load all the data 
-
-cd(output_dir_AR_peaks);
+cd(input_dir);
 
 %list all *.set files in inputpath
-file_names = dir('*.set');
+file_names = dir('*_EEG.set');
 
 %concatenate into one cell array
 files2read = {file_names.name};
 
+
+%% Load all the data 
+
+% get all set files in the folder
+files2read = {dir('*.set').name};
+
 eeglab;
 % load all eeg files
 ALLEEG = pop_loadset('filename',files2read);
-% load(dir('*.mat').name);
+load(dir('*.mat').name);
 
 
 %% Calculate Means Across Subjects 
@@ -121,7 +122,7 @@ hold off
 % TODO: Experiment with shorter epoch durations
 
 % TODO: Identify the electrode that shows the biggest amplitude in the ERP
-mean(mean_struct.all(chan_no,:,:),3)
+
 % max amplitude 
 
 

@@ -4,8 +4,9 @@ function [plot_of_trigger_and_traj] = plot_trigger_on_traj(EEG_sets, traj_struct
 
 % epoch_lim, epoch_cen  % moved from list of input arguments
 % EEG_sets = eeg_struct;
+% EEG_sets = TMPEEG;
 % traj_struct = track_data;
-% subject = 4;
+% subject = 1;
 % trial = 50;
 % task = 'task_a';
 % plot_purs = true;
@@ -30,18 +31,26 @@ else
     error("task must be either numeric or character")
 end
 
+track_idx = subject;
+
+if size(EEG_sets, 2) == 1
+    eeg_idx = 1;
+else
+    eeg_idx = subject;
+end
+
 % select events
 % find the indicies of the task in the events structure
-cor_task_idx = find(strcmp({EEG_sets(subject).event.task}, task));
+cor_task_idx = find(strcmp({EEG_sets(eeg_idx).event.task}, task));
 [min_idx, max_idx] = bounds(cor_task_idx);
 % and within that, the indicies of the events for the trial
-cor_trial_idx = find([EEG_sets(subject).event(cor_task_idx).trial_number] == trial);
+cor_trial_idx = find([EEG_sets(eeg_idx).event(cor_task_idx).trial_number] == trial);
 % then get all the trigger codes within that trial
-triggers = {EEG_sets(subject).event(cor_task_idx(cor_trial_idx)).type};
+triggers = {EEG_sets(eeg_idx).event(cor_task_idx(cor_trial_idx)).type};
 % get the unique labels
 trigger_labels = unique(triggers, 'stable');
 % and then the trial latency in ms of the events for plotting
-time_points = [EEG_sets(subject).event(cor_task_idx(cor_trial_idx)).trial_latency_ms]; 
+time_points = [EEG_sets(eeg_idx).event(cor_task_idx(cor_trial_idx)).trial_latency_ms]; 
 % get idx of central event
 % epoch_cen_times = time_points(find(strcmp(triggers, epoch_cen)));
 
@@ -50,9 +59,9 @@ time_points = [EEG_sets(subject).event(cor_task_idx(cor_trial_idx)).trial_latenc
 % epoch_bounds_times = bsxfun(@plus, epoch_cen_times', tmp);
 
 % get upsampled trajectory
-x = traj_struct(subject).upsamp_data.(task)(trial).traj_x;
-y =  traj_struct(subject).upsamp_data.(task)(trial).traj_y;
-y_purs =  traj_struct(subject).upsamp_data.(task)(trial).purs_y;
+x = traj_struct(track_idx).upsamp_data.(task)(trial).traj_x;
+y =  traj_struct(track_idx).upsamp_data.(task)(trial).traj_y;
+y_purs =  traj_struct(track_idx).upsamp_data.(task)(trial).purs_y;
 
 
 for trig_types = 1:length(trigger_labels)

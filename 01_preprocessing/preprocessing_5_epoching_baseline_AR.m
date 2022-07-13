@@ -52,7 +52,11 @@ subdir_peaks = strjoin([output_dir_epoched filesep "peaks"], filesep);
 
 savepath_baseline_const_rand = strjoin([output_dir_baseline, "const_rand"], filesep);
 savepath_baseline_occl = strjoin([output_dir_baseline, 'occl_nonoccl'], filesep);
+savepath_baseline_peaks = strjoin([output_dir_baseline, 'peaks'], filesep);
 
+output_dir_AR_const = strjoin([output_dir_AR, 'const'], filesep);
+output_dir_AR_occl = strjoin([output_dir_AR, 'occl'], filesep);
+output_dir_AR_peaks = strjoin([output_dir_AR, 'peaks'], filesep);
 
 cd(input_dir);
 
@@ -121,7 +125,7 @@ end
     event_idx = find(strcmp({TMPEEG_peaks.event.type}, event_peaks));
     % save epoched, baseline-corrected data
     TMPEEG_peaks.setname = strjoin([set_name, "_epoched_peaks.set"],"");
-    TMPEEG_peaks.setname = pop_saveset(TMPEEG_peaks, 'filename', char(TMPEEG_peaks.setname), 'filepath', char(subdir_peaks));
+    TMPEEG_peaks.setname = pop_saveset(TMPEEG_peaks, 'filename', char(TMPEEG_peaks.setname), 'filepath', char(savepath_baseline_peaks));
 
 
     %% artifact rejection
@@ -132,16 +136,16 @@ end
     TMPEEG_A = pop_jointprob(TMPEEG_A, 1, 1:TMPEEG_A.nbchan, 5, 5, 0, 1);
     TMPEEG_A.comment = TMPEEG_A.comment + "  *** apply artifact rejection";
     TMPEEG_A.setname = [set_name '_complete_preprocessing_withAR_A'];
-%     TMPEEG_A = pop_saveset(TMPEEG_A, 'file_name', TMPEEG_A.setname, 'filepath', char(output_dir_AR));
+    TMPEEG_A = pop_saveset(TMPEEG_A, 'filename', TMPEEG_A.setname, 'filepath', char(output_dir_AR_const));
 
     TMPEEG_B = pop_jointprob(TMPEEG_B, 1, 1:TMPEEG_B.nbchan, 5, 5, 0, 1);
     TMPEEG_B.comment = TMPEEG_B.comment + "  *** apply artifact rejection";
     TMPEEG_B.setname = [set_name '_complete_preprocessing_withAR_B'];
-%     TMPEEG_B = pop_saveset(TMPEEG_B, 'file_name', TMPEEG_B.setname, 'filepath', char(output_dir_AR));
+    TMPEEG_B = pop_saveset(TMPEEG_B, 'filename', TMPEEG_B.setname, 'filepath', char(output_dir_AR_occl));
 
     TMPEEG_peaks = pop_jointprob(TMPEEG_peaks, 1, 1:TMPEEG_peaks.nbchan, 5, 5, 0 ,1);
     TMPEEG_peaks.comment = TMPEEG_peaks.comment + "  *** apply artifact rejection";
     TMPEEG_peaks.setname = [set_name '_complete_preprocessing_withAR_peaks'];
-%     TMPEEG_peaks = pop_saveset(TMPEEG_peaks, 'file_name', TMPEEG_B.setname, 'filepath', char(output_dir_AR));
+    TMPEEG_peaks = pop_saveset(TMPEEG_peaks, 'filename', TMPEEG_B.setname, 'filepath', char(output_dir_AR_peaks));
 
 end
