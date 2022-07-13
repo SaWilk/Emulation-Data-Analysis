@@ -26,6 +26,8 @@ format long G
 clear
 clc
 
+%% if run from dresden, add path of eeglab
+addpath('R:\AG-Beste-Orga\Skripts\Toolbox\eeglab2021.0');
 
 %% Set Paths
 
