@@ -103,6 +103,17 @@ files2read = {file_names.name};
 ALLEEG = pop_loadset('filename',files2read);
 epochs_long = ALLEEG;
 
+% test purposes: other epochjs
+% occl epochs
+cd(output_dir_AR_occl);
+%list all *.set files in inputpath
+file_names = dir('*.set');
+%concatenate into one cell array
+files2read = {file_names.name};
+% load all eeg files
+ALLEEG = pop_loadset('filename',files2read);
+epochs_occl = ALLEEG;
+
 
 %% Calculate Means Across Subjects 
 
@@ -134,7 +145,7 @@ for i = 1:size(ALLEEG, 2)
 end
 
 
-%% Save the Mean Matrices for Convenient Loading TODO
+%% Save the Mean Matrices for Convenient Loading
 
 cd(mean_matrices_peaks_epoched_path)
 save("mean_struct_long.mat", 'mean_struct_long')
@@ -151,7 +162,7 @@ load('mean_struct_long.mat')
 
 %% Plot ERPs as grand average
 
-neg_time = 60; 
+neg_time = 200; 
 avg_peak_dist = 300;
 
 short_mean = mean(mean_struct_short.all(:,:,:),3);
@@ -208,6 +219,7 @@ hold off
 
 % Single Channel ERP
 % Identify the electrode that shows the biggest amplitude in the ERP
+neg_time = 60; 
 
 [~, neg_time_idx] = min(abs(mean_struct_short.all_time_vec - neg_time));
 [~, min_chan_idx_short] = min(short_mean(:, neg_time_idx));
@@ -268,7 +280,7 @@ hold off
 
 %% Create Topoplot of the time points of interest TODO
 
-latencies = linspace(-100, 250, 8);
+latencies = linspace(-50, 500, 12);
 % TODO: Display all topoplots in the same color range
 figure()
 for i = 1:length(latencies)
@@ -286,7 +298,7 @@ figure()
 for i = 1:length(latencies)
     [~, lat_idx] = min(abs(mean_struct_medium.all_time_vec - latencies(i)));
 
-    subplot(2, 4, i)
+    subplot(3, 4, i)
     topoplot(medium_mean(:,lat_idx), EEG.chanlocs)
     title('epochs around peaks all subjects all trials, long epochs')
     subtitle(strcat(['latency: ', num2str(latencies(i)), ' ms relative to peak' ]))

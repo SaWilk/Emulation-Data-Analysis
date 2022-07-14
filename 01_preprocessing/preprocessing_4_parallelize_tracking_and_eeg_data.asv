@@ -509,9 +509,7 @@ end
 
 for s = 1:length(subj_ids)
     event = eeg_struct(s).track_event_peaks;
-    first_task_b_idx = min(find(strcmp({event.task}, 'task_b')))+1; % for
-    % some weird reason, the first event of task b is not actually of task
-    % b...
+    first_task_b_idx = min(find(strcmp({event.task}, 'task_b')))+1;
     for lat = first_task_b_idx:length(event)            
         event(lat).latency = event(lat).latency + event(first_task_b_idx-1).latency;
     end

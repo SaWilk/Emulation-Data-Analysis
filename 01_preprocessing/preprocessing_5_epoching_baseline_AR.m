@@ -115,6 +115,8 @@ for ind = 1:length(file_names)
     file_name = files2read{ind};
     TMPEEG = pop_loadset(file_name);
     set_name = TMPEEG.subject;
+    TMPEEG.old_urevent = TMPEEG.urevent;
+    TMPEEG.urevent = TMPEEG.event;
     
     %% epoching & remove baseline for A, B, peaks
 
