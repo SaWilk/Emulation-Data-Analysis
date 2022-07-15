@@ -709,16 +709,16 @@ end
 
 % https://eeglab.org/tutorials/ConceptsGuide/Data_Structures.html
 
-out_path = strjoin([parent_path, 'Emulation-Data-Output', '03_parallelize_with_traj'], filesep);
-EEG_file_name_suffix = '_EEG';
-track_file_name_suffix = 'all_tracking_data.mat';
+out_path = strjoin([grandparent_path, "Emulation-Data-Output", "03_parallelize_with_traj"], filesep);
+EEG_file_name_suffix = "EEG";
+track_file_name_suffix = "all_tracking_data.mat";
 
 for s = 1:size(track_data, 2)
 
-    file_name = strcat([eeg_struct(s).subject, EEG_file_name_suffix]);
-    pop_saveset(eeg_struct(s), 'filename', file_name, 'filepath', out_path);
+    file_name = strjoin([eeg_struct(s).subject, EEG_file_name_suffix], '_' );
+    pop_saveset(eeg_struct(s), 'filename', char(file_name), 'filepath', char(out_path));
 
 end
 file_name = strcat([out_path, track_file_name_suffix]);
-save(file_name, 'track_data');
+save(strjoin(file_name), 'track_data');
 
