@@ -182,8 +182,7 @@ for i = 1:length(latencies)
     subplot(3, 4, i)
     topoplot(topo_mean(:, i), EEG.chanlocs, 'zlim', zlims)
     title('epochs around peaks all subjects all trials, long epochs')
-    subtitle(strcat(['latency range: ', num2str(latencies_onset(i)), ' to ', ...
-        num2str(latencies_onset(i)), ' ms relative to peak']))
+    subtitle(strcat(['latency range: ', num2str(latencies_onset(i)), ' to ',  ms relative to peak' ]))
     colorbar()
 
 end
@@ -191,11 +190,10 @@ end
 
 %% Perform cluster-Based Permutation Test TODO
 
+
 % https://www.fieldtriptoolbox.org/tutorial/cluster_permutation_timelock/
 
 % use this to find the electrode cluster 
-
-
 %% Create ERP Plot of the data TODO
 
 % TODO: sort by error size in epoch
@@ -204,9 +202,8 @@ end
 pop_erpimage()
 
 
-%% Do TF Decomposition on data
-
 %% Stuff I tried out. 
+
 
 % STUDY = std_erpplot(STUDY,ALLEEG)
 
