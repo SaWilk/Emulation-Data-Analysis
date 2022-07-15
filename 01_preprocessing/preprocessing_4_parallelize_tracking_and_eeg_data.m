@@ -577,8 +577,8 @@ end
 
 %% Reject Trials Behaviorally
 
-% extra column in events with exclude 1 or 0
-clear joystick_moved_at_0
+
+% store max and mean errors and exclude trials which start with error.  
 count = 1;
 count2 = 1;
 for s = 1:length(subj_ids)
@@ -587,11 +587,17 @@ for s = 1:length(subj_ids)
             %             error_cell{s}{task}{t} = track_data(s).upsamp_data.(task_names{task})(t).error;
             cur_mean_errors = track_data(s).upsamp_data.(task_names{task})(t).mean_error;
             cur_error = track_data(s).upsamp_data.(task_names{task})(t).error;
+            % store biggest error value in current trial
             cur_max_errors = max(cur_error);
+            % store which data we are dealing with
             which_error = [s, task, t];
+            % store in cell together with info which trial it is
             error_max_cell{count} = {cur_max_errors, which_error};
             error_cell{count} = {cur_mean_errors, which_error};
+            % if trial starts with latrge error, it is assumed that
+            % subjects moved joystick during break. 
             if cur_error(1) > 0.2;
+                % store these values in cell. 
                 joystick_moved_at_0{count2} = which_error;
                 count2 = count2 + 1;
             end
@@ -600,6 +606,7 @@ for s = 1:length(subj_ids)
     end
 end
 
+% check test script to know where these values come from. 
 
 % % trials to exclude:
 % % subject, task, trial
@@ -618,9 +625,11 @@ end
 % check subj 18 and 17
 % as well as all trials where the joystick was moved more than 0.2 of the
 % screen off the center.
+% add visually rejected trials to rem_trials
 rem_trials = [[24, 2, 46];[16, 2, 70];[30, 2, 2];[19, 1, 22];[3, 2, 38];[2, 1, 53];...
     [20, 2, 40];[20, 2, 10];[17, 1, 20];[17, 1, 19];[16, 2, 70]];
 all_trials_18 = [1:72]';
+% put all the different trials that are to be rejected together. 
 all_trials_18 = [repmat([18, 2], size(all_trials_18,1), 1),all_trials_18];
 rem_trials(end+1:end+size(all_trials_18,1), :) = all_trials_18;
 tmp = cell2mat(joystick_moved_at_0');

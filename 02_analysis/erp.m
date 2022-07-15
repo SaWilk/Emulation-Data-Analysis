@@ -113,15 +113,16 @@ load('mean_struct.mat')
 
 %% Plot ERPs as grand average
 
-neg_time = 200; 
+
 avg_peak_dist = 300;
 
 epoch_mean = mean(mean_struct.all(:,:,:),3);
 
+[~, min_ind] = min(epoch_mean,[],'all');
+[min_ind(1), min_ind(2)] = ind2sub(size(epoch_mean), min_ind)
 % Average ERP Plots
-
 figure()
-% long epocjs
+% long epochs
 
 [epoch_lims(1), epoch_lims(2)] = bounds(epochs(8).times)
 plot(mean_struct.all_time_vec, epoch_mean);
@@ -129,7 +130,7 @@ title(strcat(['ERP of all subjects averaged across epochs around peaks, n ~= ', 
 subtitle(strcat(['all channels, epochs from ', num2str(epoch_lims(1)), ' to ' num2str(epoch_lims(2))]))
 hold on
 h(1) = xline(0);
-h(2) = xline(neg_time, 'r');
+h(2) = xline(mean_struct.all_time_vec(min_ind(2)), 'r');
 h(4:5) = xline([-avg_peak_dist,avg_peak_dist], 'b');
 h(3) = xline(epoch_lims(1)+500, 'g')
 legend(h, {'peak', 'error negativity peak',  'baseline period', 'average distance of next peak'});
@@ -151,7 +152,7 @@ title(strcat(['ERP of all subjects averaged across epochs around peaks, channel 
 subtitle(strcat(['epochs from ', num2str(epoch_lims(1)), ' to ' num2str(epoch_lims(2))]))
 hold on
 h(1) = xline(0);
-h(2) = xline(neg_time, 'r');
+h(2) = xline(mean_struct.all_time_vec(min_ind(2)), 'r');
 h(4:5) = xline([-avg_peak_dist,avg_peak_dist], 'b');
 h(3) = xline(epoch_lims(1)+500, 'g')
 legend(h, {'peak', 'error negativity peak',  'baseline period', 'average distance of next peak'});
@@ -160,8 +161,8 @@ hold off
 
 %% Create Topoplot of the time points of interest TODO
 
-latencies_onset = linspace(0, 550, 12);
-latencies_offset = latencies_onset + 50;
+latencies_onset = linspace(0, 725, 30);
+latencies_offset = latencies_onset + 25;
 % TODO: Display all topoplots in the same color range
 % doc topoplot: https://rdrr.io/cran/erpR/man/topoplot.html
 
@@ -174,16 +175,16 @@ for i = 1:length(latencies_onset)
 
 end
 
-zlims = [min(topo_mean), max(topo_mean)];
+zlims = [min(topo_mean, [], 'all'), max(topo_mean, [], 'all')]';
 
 figure()
-for i = 1:length(latencies)
+for i = 1:length(latencies_onset)
 
-    subplot(3, 4, i)
-    topoplot(topo_mean(:, i), EEG.chanlocs, 'zlim', zlims)
+    subplot(6, 5, i)
+    topoplot(topo_mean(:, i), EEG.chanlocs, 'maplimits',  zlims)
     title('epochs around peaks all subjects all trials, long epochs')
-    subtitle(strcat(['latency range: ', num2str(latencies_onset(i)), ' to ', ...
-        num2str(latencies_onset(i)), ' ms relative to peak']))
+    subtitle(strcat(['latency range: average of ', num2str(latencies_onset(i)), ' to ', ...
+        num2str(latencies_offset(i)), ' ms']))
     colorbar()
 
 end
@@ -194,21 +195,30 @@ end
 % https://www.fieldtriptoolbox.org/tutorial/cluster_permutation_timelock/
 
 % use this to find the electrode cluster 
+% In EEGLAB 12, press the statistics button in the channel or component STUDY 
+% plotting interface. Then you can select cluster statistics (click on 
+% Fieldtrip, then select monte-carlo statistics, then select cluster correction).
+% It works as the other STUDY statistics.
 
 
 %% Create ERP Plot of the data TODO
 
+
 % TODO: sort by error size in epoch
 % sort by
-
-pop_erpimage()
+'[STUDY ALLEEG] = std_editset( STUDY, ALLEEG, 'name','emulation_study_old','updatedat','on','rmclust','off' );
+     [STUDY ALLEEG] = std_checkset(STUDY, ALLEEG);'
+'[STUDY ALLEEG] = std_precomp(STUDY, ALLEEG, {},'savetrials','on','interp','on','recompute','on','erp','on','erpparams',{'rmbase' [-500 0] },'erpim','on','erpimparams',{'nlines' 10 'smoothing' 10});['' ...
+    ''][STUDY EEG] = pop_savestudy( STUDY, EEG, 'filename','study_peaks_epoched.study','filepath','C:\\wilken\\Emulation-Data-Output\\study\\')
+std_erspplot(STUDY, ALLEEG)
 
 
 %% Do TF Decomposition on data
 
+
 %% Stuff I tried out. 
 
-% STUDY = std_erpplot(STUDY,ALLEEG)
+STUDY = std_erpplot(STUDY,ALLEEG)
 
 % figure; 
 % pop_plottopo(EEG, [1:60] , ''5STJS'', 0, ''ydir'',1);
