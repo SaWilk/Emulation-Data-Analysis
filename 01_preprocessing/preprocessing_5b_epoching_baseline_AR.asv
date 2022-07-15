@@ -53,9 +53,9 @@ files2read = {file_names.name};
 
 %% set parameters
 
-epoch_lims_trial = [0.75 10];
-epoch_lims_traj = [-1 3];
-epoch_lims_occl = [-1 2];
+epoch_lims_trial = [-0.75 10];
+epoch_lims_traj = [0 3];
+epoch_lims_occl = [0 2];
 
 event_fixcross = 'S 26';
 event_traj = {'S 23' 'S 24' 'S 27'};
@@ -86,12 +86,12 @@ for ind = 1:length(file_names)
 
     TMPEEG_A = TMPEEG;
     TMPEEG_A.event = TMPEEG_A.event(1:start_b);
-    TMPEEG_A = add_traj_events(TMPEEG_A);
+%     TMPEEG_A = add_traj_events(TMPEEG_A);
     TMPEEG_A.setname = [TMPEEG_A.setname  '_without_B_events'];
 
     TMPEEG_B = TMPEEG;
     TMPEEG_B.event = TMPEEG_B.event(start_b:end);
-    TMPEEG_B = add_occl_events(TMPEEG_B);
+%     TMPEEG_B = add_occl_events(TMPEEG_B);
     TMPEEG_B.setname = [TMPEEG_B.setname  '_without_A_events'];
 
     %% epoch data for trials in task A
@@ -110,38 +110,46 @@ for ind = 1:length(file_names)
     TMPEEG_A.comment = TMPEEG_A.comment + "  *** apply baseline corr around fixcross";
     TMPEEG_A.setname = [set_name '_baseline_corr_whole_trial_A.set'];
     %TMPEEG_A = pop_saveset(TMPEEG_A, 'filename', TMPEEG_A.setname, 'filepath', ...
-        char(savepath_baseline_const_rand));
+     %   char(savepath_baseline_const_rand));
 
      %% epoch data for trials in task B
 
     %epoch continuous data for whole trial
-    TMPEEG_B = pop_epoch( TMPEEG_B, {event_fixcross}, epoch_lims_trial, 'newname', ...
-        [TMPEEG.setname '_epoched_trials'], 'epochinfo', 'no');
-    TMPEEG_B.comment = TMPEEG_B.comment + "  *** epoch for trials";
-    TMPEEG_B.setname = [set_name '_epoched_trials_B.set'];
-    %TMPEEG_B = pop_saveset(TMPEEG_B, 'filename', TMPEEG_B.setname, 'filepath', ...
-     %  char(output_dir_epoched));
+    if ~strcmp(TMPEEG_A.subject, 'KMY6K') % skip subject 18 Task B cause it is only bad trials
+        TMPEEG_B = pop_epoch( TMPEEG_B, {event_fixcross}, epoch_lims_trial, 'newname', ...
+            [TMPEEG.setname '_epoched_trials'], 'epochinfo', 'no');
+        TMPEEG_B.comment = TMPEEG_B.comment + "  *** epoch for trials";
+        TMPEEG_B.setname = [set_name '_epoched_trials_B.set'];
+        %TMPEEG_B = pop_saveset(TMPEEG_B, 'filename', TMPEEG_B.setname, 'filepath', ...
+         %  char(output_dir_epoched));
+    end
 
      %% baseline correction for fixed interval around fixcross for task B
-
+if ~strcmp(TMPEEG_A.subject, 'KMY6K') % skip subject 18 Task B cause it is only bad trials
     TMPEEG_B = pop_rmbase(TMPEEG_B, base_lims_trial ,[]);
     TMPEEG_B.comment = TMPEEG_B.comment + "  *** apply baseline corr around fixcross";
     TMPEEG_B.setname = [set_name '_baseline_corr_whole_trial_B.set'];
     %TMPEEG_B = pop_saveset(TMPEEG_B, 'filename', TMPEEG_B.setname, 'filepath', ...
      %   char(savepath_baseline_const_rand));
-
+end
      %% epoch data again, for traj parts now
 
-     TMPEEG_A = pop_epoch( TMPEEG, event_traj , epoch_lims_traj, 'newname', ...
-        [TMPEEG.setname '_A_epoched_traj'], 'epochinfo', 'yes');
+     TMPEEG_A = pop_epoch( TMPEEG_A, event_traj , epoch_lims_traj, 'newname', ...
+        [TMPEEG_A.setname '_A_epoched_traj'], 'epochinfo', 'yes');
     TMPEEG_A.comment = TMPEEG_A.comment + "  *** epoch for traj parts";
     TMPEEG_A.setname = [set_name '_epoched_traj_parts.set'];
     %TMPEEG_A = pop_saveset(TMPEEG_A, 'filename', TMPEEG_A.setname, 'filepath', ...
     %    char(subdir_const_rand));
 
     %% epoch data again, for occlusion parts now
-
-
+if ~strcmp(TMPEEG_A.subject, 'KMY6K') % skip subject 18 Task B cause it is only bad trials
+    TMPEEG_B = pop_epoch(TMPEEG_B, event_occl , epoch_lims_occl, 'newname',...
+        [TMPEEG_B.setname '_B_epoched'], 'epochinfo', 'yes');
+    TMPEEG_B.comment = TMPEEG_B.comment + "  *** epoch for occl parts";
+    TMPEEG_B.setname = [set_name '_epoched_occl_parts.set'];
+%     TMPEEG_B = pop_saveset(TMPEEG_B, 'filename', TMPEEG_B.setname, 'filepath', ...
+%         char(subdir_occl));
+end
      %% artifact rejection task A with new baseline 
 
     TMPEEG_A = pop_jointprob(TMPEEG_A, 1, 1:TMPEEG_A.nbchan, 5, 5, 0, 1);
@@ -150,7 +158,14 @@ for ind = 1:length(file_names)
     TMPEEG_A = pop_saveset(TMPEEG_A, 'filename', TMPEEG_A.setname, 'filepath', ...
         char(output_dir_AR));
 
-
+    %% artifact rejection task B with new baseline 
+if ~strcmp(TMPEEG_A.subject, 'KMY6K') % skip subject 18 Task B cause it is only bad trials
+    TMPEEG_B = pop_jointprob(TMPEEG_B, 1, 1:TMPEEG_B.nbchan, 5, 5, 0, 1);
+    TMPEEG_B.comment = TMPEEG_B.comment + "  *** apply artifact rejection";
+    TMPEEG_B.setname = [set_name '_complete_preprocessing_withAR_B'];
+    TMPEEG_B = pop_saveset(TMPEEG_B, 'filename', TMPEEG_B.setname, 'filepath', ...
+        char(output_dir_AR));
+end
 end
 
 
