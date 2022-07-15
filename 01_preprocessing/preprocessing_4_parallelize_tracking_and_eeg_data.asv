@@ -263,7 +263,8 @@ subj_ids = subj_ids(tmp_idx);
 %     "C_just_right": 29,
 %     "C_too_late":   30,
 % custom: "S 15": End Trial
-% custom: "S 40": Peak
+% custom: "S 40": Peak max
+% custom: "S 50": Peak min
 
 NOLATENCIES = {'none'};
 
@@ -423,7 +424,11 @@ end
 
 %% Find Peaks of Tracking Data and put them in Events
 
-% "S 40": Peak
+% TODO: change it to be two different peak markers, one for max, one for
+% min
+% "S 40": Peak max
+% "S 50": Peak min
+
 
 PROMINENCE_TRHESH = 0.01;
 
@@ -505,16 +510,45 @@ for s = 1:size(eeg_struct,2)
 end
 
 
+%% Find Peaks of Pursuit Data and put them in Events
+
+% TODO: change it to be two different peak markers, one for max, one for
+% min
+% "S 41": Peak max
+% "S 51": Peak min
+
+% prominence in pixel space at 20 for pursuit peaks 
+% set time window after traj peak - if there is a direction change in the
+% same direction, it counts
+% change peak marker to peak marker that are either max or min - both for
+% traj and for pursuit. 
+% reject epochs for the erp analysis that do not contain pursuit peaks in
+% the same direction 
+
+
 %% Add latencies of trial a events to trial b events
 
 for s = 1:length(subj_ids)
     event = eeg_struct(s).track_event_peaks;
-    first_task_b_idx = min(find(strcmp({event.task}, 'task_b')))+1;
+    first_task_b_idx = min(find(strcmp({event.task}, 'task_b')))+1; % for
+    % some weird reason, the first event of task b is not actually of task
+    % b...
     for lat = first_task_b_idx:length(event)            
         event(lat).latency = event(lat).latency + event(first_task_b_idx-1).latency;
     end
     eeg_struct(s).track_event_peaks = event;
 end
+
+
+%% Add Fields in Event Strucure for Occlusion and Constant/Random TODO
+
+    %apply add_occl_events --> create OCCL var in EEG.event (coding
+    %occl = occl/non_occl
+    TMPEEG = add_occl_events(TMPEEG);
+
+        %apply add_traj_events --> create TRAJ var in EEG.event (coding
+    %traj = rand1/const/rand2
+    TMPEEG = add_traj_events(TMPEEG);
 
 
 %% Remove historical fields; can be commented out here easily for re-tracing changes
@@ -623,7 +657,7 @@ for s = unique(sort(rem_trials(:,1)))' % took me half an hour, but for loops loo
 end
 
 
-%% Replace Constant Traj Trigger from .vmrk with calculated from .npz
+%% Replace Constant Traj Trigger from .vmrk with calculated from .npz TODO
 
 %align constant trajectories of several trials
 %compare constant trajectory and trial trajectory at every point

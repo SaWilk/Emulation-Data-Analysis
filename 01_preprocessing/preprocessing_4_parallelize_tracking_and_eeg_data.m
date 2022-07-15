@@ -37,16 +37,20 @@ file_path = fileparts(file_path);
 addpath(file_path)
 % tracking data
 parent_path = strsplit(file_path, filesep);
-parent_path((end-1):end) = [];
+parent_path(end) = [];
+grandparent_path = parent_path;
+parent_path = strjoin(parent_path, filesep);
+grandparent_path(end) = [];
+grandparent_path = strjoin(grandparent_path, filesep);
 % get root path to data folder
-track_data_path = strjoin([parent_path, 'Emulation-Data-Input', '00_npz_files'], filesep);
+track_data_path = strjoin([grandparent_path, "Emulation-Data-Input", "00_npz_files"], filesep);
 subj_paths = genpath(track_data_path); % generate subfolder paths
 subj_paths = strsplit(subj_paths, ";"); % split the string vector at ;
 subj_paths(1) = []; % remove top level entry
 subj_paths(end) = []; % remove final entry
 
 % eeg data
-eeg_data_path = strjoin([parent_path, 'Emulation-Data-Output', '02_IClabel'], filesep); % get root path to data folder
+eeg_data_path = strjoin([grandparent_path, "Emulation-Data-Output", "02_IClabel"], filesep); % get root path to data folder
 % contains raw and preprocessed folders
 
 % get subject ids from folder names
@@ -59,7 +63,9 @@ num_subj = length(subj_ids); % get num of subfolders
 % initialize data structure
 track_data = struct();
 clear tmp
-% eeglab
+
+% add functions in parent dir
+addpath([char(parent_path) filesep 'functions']);
 
 
 %% Load Tracking data
@@ -263,7 +269,8 @@ subj_ids = subj_ids(tmp_idx);
 %     "C_just_right": 29,
 %     "C_too_late":   30,
 % custom: "S 15": End Trial
-% custom: "S 40": Peak
+% custom: "S 40": Peak max
+% custom: "S 50": Peak min
 
 NOLATENCIES = {'none'};
 
@@ -423,7 +430,11 @@ end
 
 %% Find Peaks of Tracking Data and put them in Events
 
-% "S 40": Peak
+% TODO: change it to be two different peak markers, one for max, one for
+% min
+% "S 40": Peak max
+% "S 50": Peak min
+
 
 PROMINENCE_TRHESH = 0.01;
 
@@ -505,6 +516,22 @@ for s = 1:size(eeg_struct,2)
 end
 
 
+%% Find Peaks of Pursuit Data and put them in Events
+
+% TODO: change it to be two different peak markers, one for max, one for
+% min
+% "S 41": Peak max
+% "S 51": Peak min
+
+% prominence in pixel space at 20 for pursuit peaks 
+% set time window after traj peak - if there is a direction change in the
+% same direction, it counts
+% change peak marker to peak marker that are either max or min - both for
+% traj and for pursuit. 
+% reject epochs for the erp analysis that do not contain pursuit peaks in
+% the same direction 
+
+
 %% Add latencies of trial a events to trial b events
 
 for s = 1:length(subj_ids)
@@ -529,6 +556,23 @@ end
 eeg_struct = rmfield(eeg_struct, ["track_event", "track_event_peaks"]);
 
 % isequal(fieldnames(ALLEEG), fieldnames(tmp_struct))
+
+
+%% Add Fields in Event Strucure for Occlusion and Constant/Random TODO
+
+% copy_struct = eeg_struct;
+
+for s = 1:length(subj_ids)
+
+    %apply add_occl_events --> create OCCL var in EEG.event (coding
+    %occl = occl/non_occl
+    eeg_struct(s) = add_occl_events(eeg_struct(s));
+
+        %apply add_traj_events --> create TRAJ var in EEG.event (coding
+    %traj = rand1/const/rand2
+    eeg_struct(s) = add_traj_events(eeg_struct(s));
+
+end
 
 
 %% Reject Trials Behaviorally
@@ -625,7 +669,7 @@ for s = unique(sort(rem_trials(:,1)))' % took me half an hour, but for loops loo
 end
 
 
-%% Replace Constant Traj Trigger from .vmrk with calculated from .npz
+%% Replace Constant Traj Trigger from .vmrk with calculated from .npz TODO
 
 %align constant trajectories of several trials
 %compare constant trajectory and trial trajectory at every point
