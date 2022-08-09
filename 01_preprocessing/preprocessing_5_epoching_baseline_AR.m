@@ -172,3 +172,5 @@ end
         TMPEEG_peaks.setname, 'filepath', char(output_dir_AR_peaks));
 
 end
+
+% TODO: Add study, for group analyses

@@ -288,8 +288,7 @@ for s = 1:size(eeg_struct,2)
         % [val, idx] = min(diff(find(strcmp({event.type}, 'S 12'))))
         event(688:689)= [];
     end
-    % sanity check of triggers - are we DEALING WITH TASK A EVEN???
-    % TODO: Alter check once pipeline is adjusted for Task B as well.
+
     event_cat = categorical({event.type});
     categories(event_cat);
     % if you should ever feel the need to count cats, there you go:
@@ -501,6 +500,8 @@ for s = 1:size(eeg_struct,2)
                     event_cur_task(current_event_idx+1).trial_latency = current_trial_peak_latencies(idx);
                     event_cur_task(current_event_idx+1).trial_latency_ms = event_cur_task(current_event_idx+1).trial_latency/250*1000;
                     event_cur_task(current_event_idx+1).trial_number = t;
+                    event_cur_task(current_event_idx+1).condition = occlusion;
+
                 end
             end
             % copy the event structure into a temporary field in eeg_struct

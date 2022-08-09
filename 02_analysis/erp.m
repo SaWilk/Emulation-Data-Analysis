@@ -36,7 +36,7 @@ addpath([char(parent_dir) filesep 'functions']);
 
 % set input & output directory
 input_dir = strjoin([parent_dir_2, "Emulation-Data-Output\03_parallelize_with_traj"], filesep);
-output_dir = strjoin([parent_dir_2, "Emulation-Data-Output\"], filesep);
+output_dir = strjoin([parent_dir_2, "Emulation-Data-Output"], filesep);
 output_dir_epoched = strjoin([parent_dir_2, "Emulation-Data-Output\04_epoched"], filesep);
 output_dir_baseline = strjoin([parent_dir_2, "Emulation-Data-Output\05_baseline"], filesep);
 output_dir_AR = strjoin([parent_dir_2, "Emulation-Data-Output\06_artifact_rejection"], filesep);
@@ -46,6 +46,7 @@ subdir_occl = strjoin([output_dir_epoched filesep "occl_nonoccl"], filesep);
 % out dirs for peaks for multiple epoch lengths
 subdir_peaks = strjoin([output_dir_epoched filesep 'peaks_-500_750'], filesep);
 
+study_dir = strjoin([output_dir, "study"], filesep);
 
 savepath_baseline_const_rand = strjoin([output_dir_baseline, "const_rand"], filesep);
 savepath_baseline_occl = strjoin([output_dir_baseline, 'occl_nonoccl'], filesep);
@@ -62,6 +63,9 @@ mkdir(mean_matrices_path);
 mean_matrices_peaks_epoched_path = strjoin([mean_matrices_path, 'peaks'], filesep);
 mkdir(mean_matrices_peaks_epoched_path);
 
+% neighbors dir
+neighbors_dir = strjoin([parent_dir_2, "Emulation-Data-Input", "EEG_files"], filesep);
+
 
 %% Load Epoched data 
 
@@ -77,7 +81,9 @@ files2read = {file_names.name};
 ALLEEG = pop_loadset('filename',files2read);
 epochs = ALLEEG;
 
-
+% ALLEEG
+% 
+% pop_study
 %% Calculate Means Across Subjects 
 
 % TODO: Put the means in a structure. 
@@ -107,6 +113,8 @@ save("mean_struct.mat", 'mean_struct')
 
 
 %% Load Previously Generated Mean Structures
+
+cd(mean_matrices_peaks_epoched_path)
 
 load('mean_struct.mat')
 
@@ -163,7 +171,6 @@ hold off
 
 latencies_onset = linspace(0, 725, 30);
 latencies_offset = latencies_onset + 25;
-% TODO: Display all topoplots in the same color range
 % doc topoplot: https://rdrr.io/cran/erpR/man/topoplot.html
 
 % extract means across 50 ms periods for topoplot
@@ -176,6 +183,7 @@ for i = 1:length(latencies_onset)
 end
 
 zlims = [min(topo_mean, [], 'all'), max(topo_mean, [], 'all')]';
+EEG = ALLEEG(1)
 
 figure()
 for i = 1:length(latencies_onset)
@@ -190,10 +198,43 @@ for i = 1:length(latencies_onset)
 end
 
 
+%% Load Study
+
+[ STUDY ALLEEG ] = pop_loadstudy('filename', 'study_peaks_epoched.study', 'filepath', study_dir)
+
+
 %% Perform cluster-Based Permutation Test TODO
 
 % https://www.fieldtriptoolbox.org/tutorial/cluster_permutation_timelock/
+% not sure whether I am using the fieldtrip parameters correctly or whether
+% I am supposed to specify tzhings like alpha in eeglab or fieltrip syntax.
+% try it out.
+% [STUDY neighbors] = std_prepare_neighbors( STUDY, ALLEEG)
+load(strjoin([neighbors_dir, 'fieldtrip_EEG_KJP_neighbours_61.mat'], filesep))
+% stat_cond
+% TODO: Add a condition in which all data is zero by copying the data and 
 
+eeglab redraw
+
+For example, to compute mean ERPs statistics from a
+            STUDY for epochs of 800 frames in two conditions from three
+            groups of 12 subjects:
+ 
+            >> erp_data_for_all_subjects_possibly_from_STUDY = { [800x12] [800x12] [800x12];... % 3 groups, cond 1
+                    [800x12] [800x12] [800x12] };  % 3 groups, cond 2
+[pcond, pgroup, pinter, statscond, statsgroup, statsinter] = std_stat(...
+    erp_data_for_all_subjects_possibly_from_STUDY, 'groupstats', 'off', ...
+    'condstats', 'off', 'method', 'permutation', 'naccu', '1000', 'alpha', '0.9', ...
+    'mcorrect', 'none', 'mode', 'fieldtrip', 'fieldtripnaccu', 'numrandomization', ...
+    'fieldtripalpha', '0.9', 'fieldtripmethod', 'montecarlo', ...
+    'fieldtripmcorrect','cluster', 'fieldtripclusterparam', {'clusterstatistic', ...
+    'maxsum', 'statistic', 'indepsamplesT'}, 'fieldtripchannelneighbor', 'neighbours' )
+% 'fieldtripclusterparam' string or cell array for optional parameters
+%                              for cluster correction method, see function
+%                              ft_statistics_montecarlo for more information.
+%    'fieldtripchannelneighbor' - Fieldtrip channel neighbour structure for 
+%                                 cluster correction method, see function
+%                                 std_prepare_neighbors for more information.
 % use this to find the electrode cluster 
 % In EEGLAB 12, press the statistics button in the channel or component STUDY 
 % plotting interface. Then you can select cluster statistics (click on 
