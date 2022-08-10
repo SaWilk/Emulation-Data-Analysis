@@ -46,6 +46,8 @@ plot_trigger_on_traj(ALLEEG, track_data, s, t, task)
 
 % Visual artifact rejection 
 
+
+% store all values above cutoff for mean error in cell. 
 tmp = cellfun(@(v)v(1),error_cell);
 tmp_vec = [tmp{:}];
 % [val, idx] = maxk(tmp_vec,10);
@@ -61,6 +63,8 @@ suspicious_traj = cellfun(@(v)v(2),{error_cell{idx}});
 yline(cutoff)
 hold off
 
+
+% store all values above cutoff for max error in cell. 
 tmp2 = cellfun(@(v)v(1),error_max_cell);
 tmp2_vec = [tmp2{:}];
 % plot error max distribution
@@ -74,8 +78,8 @@ suspicious_traj(end+1:end+length(tmp_cell)) = tmp_cell;
 
 yline(cutoff)
 hold off
-suspicious_traj{1}
-suspicious_traj{2}
+
+% remove all duplicate values. 
 while i <= length(suspicious_traj)
 
     if sum(cellfun(@isequal,suspicious_traj, repmat(suspicious_traj(i),1, length(suspicious_traj)))) > 1
