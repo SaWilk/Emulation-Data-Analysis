@@ -53,12 +53,12 @@ files2read = {file_names.name};
 
 %% set parameters
 
-epoch_lims_trial = [-0.75 10];
-epoch_lims_traj = [-1 3];
-epoch_lims_occl = [-1 2];
+epoch_lims_trial = [-0.75 13];
+epoch_lims_traj = [0 3];
+epoch_lims_occl = [0 2];
 
 event_fixcross = 'S 26';
-event_traj = {'S 23' 'S 24' 'S 27'};
+event_traj = {'S 27' 'S 23' 'S 24' };
 event_occl = {'S 20' 'S 21'};
 
 base_lims_trial = [-750 0];
@@ -86,12 +86,12 @@ for ind = 1:length(file_names)
 
     TMPEEG_A = TMPEEG;
     TMPEEG_A.event = TMPEEG_A.event(1:start_b);
-    TMPEEG_A = add_traj_events(TMPEEG_A);
+    %TMPEEG_A = add_traj_events(TMPEEG_A);
     TMPEEG_A.setname = [TMPEEG_A.setname  '_without_B_events'];
 
     TMPEEG_B = TMPEEG;
     TMPEEG_B.event = TMPEEG_B.event(start_b:end);
-    TMPEEG_B = add_occl_events(TMPEEG_B);
+    %TMPEEG_B = add_occl_events(TMPEEG_B);
     TMPEEG_B.setname = [TMPEEG_B.setname  '_without_A_events'];
 
     %% epoch data for trials in task A
@@ -134,7 +134,7 @@ if ~strcmp(TMPEEG_A.subject, 'KMY6K') % skip subject 18 Task B cause it is only 
 end
      %% epoch data again, for traj parts now
 
-     TMPEEG_A = pop_epoch( TMPEEG_A, event_traj , epoch_lims_traj, 'newname', ...
+    TMPEEG_A = pop_epoch( TMPEEG_A, event_traj , epoch_lims_traj, 'newname', ...
         [TMPEEG_A.setname '_A_epoched_traj'], 'epochinfo', 'yes');
     TMPEEG_A.comment = TMPEEG_A.comment + "  *** epoch for traj parts";
     TMPEEG_A.setname = [set_name '_epoched_traj_parts.set'];
