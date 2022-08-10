@@ -500,7 +500,15 @@ for s = 1:size(eeg_struct,2)
                     event_cur_task(current_event_idx+1).trial_latency = current_trial_peak_latencies(idx);
                     event_cur_task(current_event_idx+1).trial_latency_ms = event_cur_task(current_event_idx+1).trial_latency/250*1000;
                     event_cur_task(current_event_idx+1).trial_number = t;
-                    event_cur_task(current_event_idx+1).condition = occlusion;
+%                     event_cur_task(current_event_idx+1).condition =
+%                     occlusion;  % in order to separate the peaks in the
+%                     conditions, I need to add a field that labels each
+%                     peak as either having happened while the trajectory
+%                     was occluded or while it was visible. TODO.
+% in the end this will be used in the STUDY to select a design and the
+% independent variable under edit deisgn
+% additional thought: It might also make sense to add the error for each
+% epoch in the event structure as a continuous variable 
 
                 end
             end
