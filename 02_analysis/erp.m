@@ -78,12 +78,17 @@ file_names = dir('*.set');
 %concatenate into one cell array
 files2read = {file_names.name};
 % load all eeg files
-ALLEEG = pop_loadset('filename',files2read);
-epochs = ALLEEG;
+% ALLEEG2 = struct();
+for idx = 1:length(files2read)
+     ALLEEG2(idx) = pop_loadset('filename',files2read{idx});
+%      ALLEEG2(idx) = EEG;
+end
 
 % ALLEEG
 % 
 % pop_study
+
+
 %% Calculate Means Across Subjects 
 
 % TODO: Put the means in a structure. 
@@ -168,6 +173,8 @@ hold off
 
 
 %% Create Topoplot of the time points of interest 
+
+epoch_mean = mean(mean_struct.all(:,:,:),3);
 
 latencies_onset = linspace(0, 725, 30);
 latencies_offset = latencies_onset + 25;
@@ -269,15 +276,13 @@ For example, to compute mean ERPs statistics from a
 % Script by Adriana Böttcher
 % Adapted by Saskia Wilken
 
-clear
-clc
-
 
 %% add fieldtrip path
 eeglab;
 close;
 
 % file location
+addpath 'C:\Users\swilk\AppData\Roaming\MathWorks\MATLAB Add-Ons\Collections\FieldTrip'
 file_path = matlab.desktop.editor.getActiveFilename;
 file_path = fileparts(file_path);
 addpath(file_path);
@@ -308,10 +313,20 @@ load(strjoin([neighbors_dir, 'fieldtrip_EEG_KJP_neighbours_61.mat'], filesep))
 
 
 % convert to fieldtrip
-for i = 1:length(ALLEEG)
-    eeg_field(i) = eeglab2fieldtrip(ALLEEG(i), 'timelockanalysis', 'none');
+for i = 1:length(ALLEEG2)
+    eeg_field(i) = eeglab2fieldtrip(ALLEEG2(i), 'timelockanalysis', 'none');
+end
+% plot(eeg_field(26).time, eeg_field(26).avg')
+
+zero_field = eeg_field; 
+for i = 1:length(eeg_field)
+    zero_field(i).avg = zeros(size(zero_field(i).avg));
 end
 
+for i = 1:length(eeg_field)
+    eeg_cell{i} = eeg_field(i);
+    zero_cell{i} = zero_field(i);
+end
 
 % I NEED THIS: ALTERNATIVELY, I CAN GENERATE IT MYSELF
 % load('fieldtrip_EEG_KJP_elec_61');
@@ -319,35 +334,40 @@ end
 % this data is missing, Adriana will look it up late.r 
 % elec.label = upper(elec.label);
 
-% was already here: 
-constant = cellfun(@(x) x.constant, freq_all, 'UniformOutput', false);
-rand1 = cellfun(@(x) x.rand1, freq_all, 'UniformOutput', false);
-rand2 = cellfun(@(x) x.rand2, freq_all, 'UniformOutput', false);
-% freq all is a cell 1x32, each cell contains subject data and it is split
-% in two cells, one for each condition. 
+% load(['C:\wilken\Emulation-Data-Input' filesep 'freq_all_theta']);
+% 
+% % was already here: 
+% constant = cellfun(@(x) x.constant, freq_all, 'UniformOutput', false);
+% rand1 = cellfun(@(x) x.rand1, freq_all, 'UniformOutput', false);
+% rand2 = cellfun(@(x) x.rand2, freq_all, 'UniformOutput', false);
+% % freq all is a cell 1x32, each cell contains subject data and it is split
+% % in two cells, one for each condition. 
+% erp_cond = mean_struct.all; % ??
+% zero_cond = zeros(size(mean_struct.all)); % ??
+
+
 
 %% init
 % conds = {'constant', 'rand1', 'rand2'};
 % conds: zero, erp signal at ~200
-cond_erp = erp_signal(:,'200ms') % pseudo code
-cond_zero = zeros(size(erp_signal, 1), size(erp_signal, 2)) % pseudo code
+% cond_erp = erp_signal(:,'200ms') % pseudo code
+% cond_zero = zeros(size(erp_signal, 1), size(erp_signal, 2)) % pseudo code
 
-%create design matrix for within test
-design = zeros(2, size(constant, 2)*2);
-for i = 1:size(constant, 2)
+design = zeros(2, size(eeg_cell, 2)*2);
+for i = 1:size(eeg_cell, 2)
     design(1,i) = i;
 end
-for i = 1:size(constant, 2)
-    design(1,size(constant, 2)+i) = i;
+for i = 1:size(eeg_cell, 2)
+    design(1,size(eeg_cell, 2)+i) = i;
 end
-design(2,1:size(constant, 2))        = 1;
-design(2,size(constant, 2)+1:2*size(constant, 2)) = 2;
-
-constant = rand(1, 100)
-random = rand(1, 100)
+design(2,1:size(eeg_cell, 2))        = 1;
+design(2,size(eeg_cell, 2)+1:2*size(eeg_cell, 2)) = 2;
 
 
 %% Get Neighbours
+
+% generates a file called 'neighbours'
+load(strjoin([neighbors_dir, 'fieldtrip_EEG_KJP_neighbours_61.mat'], filesep))
 
 cfg_neighb        = [];
 cfg_neighb.method = 'distance';
@@ -356,24 +376,22 @@ neighbours        = neighbours % ft_prepare_neighbours(cfg_neighb, dataFC_LP);
 
 %%
 % CLUSTER TEST
-%constant vs. rand1
-calpha  = 0.9;
-alpha   = 0.9;
+% erp vs zero
+calpha  = 0.0009;
+alpha   = 0.0009;
+latency = [0.172, 0.228];
 
 % cfg is the configuraiton structure of fieldtrip
 cfg                     = [];
-cfg.design              = [ones(1,50), ones(1,50)*2]; % design matrix, pseudo code
+cfg.design              = design;
 cfg.uvar                = 1;
 cfg.ivar                = 2;
 cfg.channel             = {'all'};
-cfg.frequency           = [4 7];
-cfg.avgoverfreq         = 'no';
 cfg.avgovertime         = 'no';
-%cfg.latency             = [max(constant{1}.time)]; %??
 cfg.method              = 'montecarlo';
-cfg.statistic           = 'depsamplesT';
+cfg.statistic           = 'depsamplesT'; % really indepsamples??? With comparison against 0 
 cfg.correctm            = 'cluster';
-cfg.clusteralpha        = calpha;               % 0.1;
+cfg.clusteralpha        = calpha;               % 0.05;
 cfg.clusterstatistic    = 'maxsum';
 cfg.minnbchan           = 0;
 cfg.neighbours          = neighbours;
@@ -381,10 +399,29 @@ cfg.tail                = 0;
 cfg.clustertail         = 0;
 cfg.alpha               = alpha;               % 0.025;
 cfg.numrandomization    = 1000;
-cfg.statistic           = 'indepsamplesT';
+cfg.latency             = latency; % time interval over which the experimental
+                                 % conditions must be compared (in seconds)
 
-stats      = ft_timelockstatistics(cfg, constant{:}, rand1{:});
 
+stats      = ft_timelockstatistics(cfg, eeg_cell{:}, zero_cell{:});
+
+
+% Plot the CBP results
+
+% ft_prepare_layout
+load(strjoin([neighbors_dir, 'fieldtrip_EEG_KJP_layout_61.mat'], filesep))
+
+cfg.layout = lay;
+cfg.style = 'blank';
+% cfg.contournum = 0;
+cfg.highlightcolorpos         = [0 0 0.75];
+cfg.highlightcolorneg         = [0.75 0 0];
+cfg.highlightsymbolseries     = ['x', 'x', 'x', 'x', 'x'];
+% cfg.saveaspng = "cluster_GO_19_pre.png";
+
+figure(1)
+ft_clusterplot(cfg, stats);
+sgtitle(strjoin(["Significant clusters, calpha = ", calpha, " alpha = ", alpha], ""));
 
 %%
 % CLUSTER TEST
