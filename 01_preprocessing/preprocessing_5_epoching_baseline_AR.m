@@ -70,7 +70,7 @@ mkdir(output_dir_AR_peaks)
 cd(input_dir);
 
 % list all *.set files in inputpath
-file_names = dir('*_EEG.set');
+file_names = dir('*parallelized.set');
 
 % concatenate into one cell array
 files2read = {file_names.name};

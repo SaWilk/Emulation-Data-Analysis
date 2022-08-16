@@ -278,8 +278,8 @@ For example, to compute mean ERPs statistics from a
 
 
 %% add fieldtrip path
-eeglab;
-close;
+% eeglab;
+% close;
 
 % file location
 addpath 'C:\Users\swilk\AppData\Roaming\MathWorks\MATLAB Add-Ons\Collections\FieldTrip'
@@ -377,9 +377,9 @@ neighbours        = neighbours % ft_prepare_neighbours(cfg_neighb, dataFC_LP);
 %%
 % CLUSTER TEST
 % erp vs zero
-calpha  = 0.0009;
-alpha   = 0.0009;
-latency = [0.172, 0.228];
+calpha  = 0.001;
+alpha   = 0.001;
+latency = [0.18, 0.22];
 
 % cfg is the configuraiton structure of fieldtrip
 cfg                     = [];
@@ -402,26 +402,143 @@ cfg.numrandomization    = 1000;
 cfg.latency             = latency; % time interval over which the experimental
                                  % conditions must be compared (in seconds)
 
+stats = ft_timelockstatistics(cfg, eeg_cell{:}, zero_cell{:});
+% The field prob contains the proportion of draws from the permutation 
+% distribution with a maximum cluster-level statistic that is larger than 
+% the cluster-level test statistic
+stats.prob
+stats.stat %  cluster-level test statistic (here with maxsum: the sum of 
+% the T-values in this cluster).
 
-stats      = ft_timelockstatistics(cfg, eeg_cell{:}, zero_cell{:});
+%% Plot the CBP results Nicos Approach
+% https://github.com/fieldtrip/fieldtrip/blob/master/ft_clusterplot.m
+% https://www.fieldtriptoolbox.org/tutorial/plotting/
+% https://github.com/fieldtrip/fieldtrip/blob/release/ft_topoplotER.m
 
-
-% Plot the CBP results
 
 % ft_prepare_layout
 load(strjoin([neighbors_dir, 'fieldtrip_EEG_KJP_layout_61.mat'], filesep))
 
 cfg.layout = lay;
-cfg.style = 'blank';
+% cfg.style = 'blank';
 % cfg.contournum = 0;
 cfg.highlightcolorpos         = [0 0 0.75];
 cfg.highlightcolorneg         = [0.75 0 0];
-cfg.highlightsymbolseries     = ['x', 'x', 'x', 'x', 'x'];
+% cfg.highlightsymbolseries     = ['x', 'x', 'x', 'x', 'x'];
+cfg.subplotsize    = [4, 4];
 % cfg.saveaspng = "cluster_GO_19_pre.png";
 
-figure(1)
+figure(2)
 ft_clusterplot(cfg, stats);
 sgtitle(strjoin(["Significant clusters, calpha = ", calpha, " alpha = ", alpha], ""));
+colorbar()
+
+% topoplot verwenden um t-werte der channels zu plotten 
+% 'mask' um nur überschwellige Werte anzuzeigen
+% Bedingungsvergleiche testen
+
+
+%% Plot the CBP Results website approach
+
+% To plot the results of the permutation test, we use the plotting function 
+% ft_topoplotER. In doing so, we will plot a topography of the difference 
+% between the two experimental conditions (FIC and FC). On top of that, and 
+% for each timestep of interest, we will highlight the sensors which are 
+% members of significant clusters. First, however, we must calculate the 
+% difference between conditions using ft_math.
+
+cfg    = [];
+avgFIC = ft_timelockanalysis(cfg, dataFIC_LP);
+avgFC  = ft_timelockanalysis(cfg, dataFC_LP);
+
+% Then take the difference of the averages using ft_math
+cfg           = [];
+cfg.operation = 'subtract';
+cfg.parameter = 'avg';
+raweffectFICvsFC = ft_math(cfg, avgFIC, avgFC);
+
+% We then construct a boolean matrix indicating whether a channel/time point 
+% belongs to a cluster that we deem interesting to inspect. This matrix has 
+% size [Number_of_MEG_channels x Number_of_time_samples], like 
+% stat.posclusterslabelmat. We’ll make two such matrices: one for positive 
+% clusters (named pos), and one for negative (neg). All (channel,time)-pairs 
+% belonging to the large clusters whose probability of occurrence is 
+% sufficiently low in relation to the associated randomization distribution 
+% of clusterstats will be coded in the new boolean matrix as 1, and all those 
+% that don’t will be coded as 0.
+
+% Make a vector of all p-values associated with the clusters from ft_timelockstatistics.
+pos_cluster_pvals = [stat.posclusters(:).prob];
+
+% Then, find which clusters are deemed interesting to visualize, here we use a cutoff criterion based on the
+% cluster-associated p-value, and take a 5% two-sided cutoff (i.e. 0.025 for the positive and negative clusters,
+% respectively
+pos_clust = find(pos_cluster_pvals < 0.025);
+pos       = ismember(stat.posclusterslabelmat, pos_clust);
+
+% and now for the negative clusters...
+neg_cluster_pvals = [stat.negclusters(:).prob];
+neg_clust         = find(neg_cluster_pvals < 0.025);
+neg               = ismember(stat.negclusterslabelmat, neg_clust);
+
+% Alternatively, we can manually select which clusters we want to plot. If 
+% we only want to see the extent of the first (i.e. most significant) 
+% positive and negative clusters, for instance, we can do so as follows:
+
+pos = stat.posclusterslabelmat == 1; % or == 2, or 3, etc.
+neg = stat.negclusterslabelmat == 1;
+
+% To plot a sequence of twenty topographic plots equally spaced between 0 and 
+% 1 second, we define the vector j of time steps. These time intervals 
+% correspond to the samples m in stat and in the variables pos. and neg. m 
+% and j must, therefore, have the same length.
+
+% To be sure that your sample-based time windows align with your time windows 
+% in seconds, check the following:
+
+timestep      = 0.05; % timestep between time windows for each subplot (in seconds)
+sampling_rate = dataFC_LP.fsample; % Data has a temporal resolution of 300 Hz
+sample_count  = length(stat.time);
+% number of temporal samples in the statistics object
+j = [0:timestep:1]; % Temporal endpoints (in seconds) of the ERP average computed in each subplot
+m = [1:timestep*sampling_rate:sample_count]; % temporal endpoints in M/EEG samples
+To plot the data use the following for-loop:
+
+% First ensure the channels to have the same order in the average and in the statistical output.
+% This might not be the case, because ft_math might shuffle the order
+[i1,i2] = match_str(raweffectFICvsFC.label, stat.label);
+
+for k = 1:20
+   subplot(4,5,k);
+   cfg = [];
+   cfg.xlim = [j(k) j(k+1)];   % time interval of the subplot
+   cfg.zlim = [-2.5e-13 2.5e-13];
+   % If a channel is in a to-be-plotted cluster, then
+   % the element of pos_int with an index equal to that channel
+   % number will be set to 1 (otherwise 0).
+
+   % Next, check which channels are in the clusters over the
+   % entire time interval of interest.
+   pos_int = zeros(numel(raweffectFICvsFC.label),1);
+   neg_int = zeros(numel(raweffectFICvsFC.label),1);
+   pos_int(i1) = all(pos(i2, m(k):m(k+1)), 2);
+   neg_int(i1) = all(neg(i2, m(k):m(k+1)), 2);
+
+   cfg.highlight   = 'on';
+   % Get the index of the to-be-highlighted channel
+   cfg.highlightchannel = find(pos_int | neg_int);
+   cfg.comment     = 'xlim';
+   cfg.commentpos  = 'title';
+   cfg.layout      = 'CTF151_helmet.mat';
+   cfg.interactive = 'no';
+   cfg.figure      = 'gca'; % plots in the current axes, here in a subplot
+   ft_topoplotER(cfg, raweffectFICvsFC);
+end
+% In this for-loop, cfg.xlim defines the time interval of each subplot. The 
+% variables pos_int and neg_int boolean vectors indicating which channels of 
+% pos and neg are significant in the time interval of interest. This is 
+% defined in cfg.highlightchannel. The for-loop plots 20 subplots covering a 
+% time interval of 50 ms each. Running this for-loop creates the following figure:
 
 %%
 % CLUSTER TEST
