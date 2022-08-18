@@ -87,10 +87,10 @@ cd(datapath_B);
 % to ft
 subjects(18) = [];
 
-freq_all_B = {};
+freq_all_A = {};
 
-for cond = 1:size(conds_B,2)
-    cond = char(conds_B(cond));
+for cond = 1:size(conds_A,2)
+    cond = char(conds_A(cond));
 
     % section in struct to fill with subject data
     freq_all.(cond) = {};
@@ -100,82 +100,78 @@ for cond = 1:size(conds_B,2)
         filename = [char(sbj) '_' char(cond) '_freq'];
         freq = load(filename);
         freq = freq.freq;
-        freq_all_B.(cond){sbj_num} = freq;
+        freq_all_A.(cond){sbj_num} = freq;
     end
 
 end
 
 % save all data in datapath
-outputname = [datapath_B filesep 'freq_all_sbj_B'];
-save(outputname, 'freq_all_B');
+outputname = [datapath_A filesep 'freq_all_sbj_A'];
+save(outputname, 'freq_all_A');
 
-%%  calculate GAV for the two conditions
+%%  calculate GAV for the three conditions
 
-freq_GAV_B = {};
+freq_GAV_A = {};
 
-for cond = 1:size(conds_B,2)
-    cond = char(conds_B(cond));
-    freq_data_cond = freq_all_B.(cond);
+for cond = 1:size(conds_A,2)
+    cond = char(conds_A(cond));
+    freq_data_cond = freq_all_A.(cond);
 
     cfg = [];
-    freq_GAV_B.(cond) = ft_freqgrandaverage(cfg, freq_data_cond{:});
+    freq_GAV_A.(cond) = ft_freqgrandaverage(cfg, freq_data_cond{:});
 end
 
 
-%% plotting stuff task A
 
-% multiplot constant
+
+
+
+
+
+
+
+
+
+
+
+
+%% plotting stuff
+
+%% multiplot constant
 
 cfg = [];
 cfg.layout = lay;
 layout = ft_prepare_layout(cfg);
 
-cfg.ylim = [2 15];
-cfg.xlim = [0 3]
+cfg = [];
+cfg.ylim = [1 15];
 cfg.zlim = 'maxmin';
 cfg.layout = layout;
 cfg.title = 'Task A: avg const';
-ft_multiplotTFR(cfg, freq_GAV_A.const);
+ft_multiplotTFR(cfg, freq_GAV.const);
 
-% multiplot random 1
-
-cfg.ylim = [2 15];
-cfg.xlim = [0 3]
-cfg.zlim = 'maxmin';
-cfg.layout = layout;
-cfg.title = 'Task A: avg rand1';
-ft_multiplotTFR(cfg, freq_GAV_A.rand1);
-
-% multiplot random 2
-
-cfg.ylim = [2 15];
-cfg.xlim = [0 3]
-cfg.zlim = 'maxmin';
-cfg.layout = layout;
-cfg.title = 'Task A: avg rand2';
-ft_multiplotTFR(cfg, freq_GAV_A.rand2);
-
-
-%% plotting stuff task B
-
-% multiplot constant
+%% multiplot random 1
 
 cfg = [];
 cfg.layout = lay;
 layout = ft_prepare_layout(cfg);
 
-cfg.ylim = [2 15];
-cfg.xlim = [0 2]
+cfg = [];
+cfg.ylim = [1 15];
 cfg.zlim = 'maxmin';
 cfg.layout = layout;
-cfg.title = 'Task B: avg occl';
-ft_multiplotTFR(cfg, freq_GAV_B.occl);
+cfg.title = 'Task A: avg rand1';
+ft_multiplotTFR(cfg, freq_GAV.rand1);
 
-% multiplot random 1
+%% multiplot random 2
 
-cfg.ylim = [2 15];
-cfg.xlim = [0 2]
+cfg = [];
+cfg.layout = lay;
+layout = ft_prepare_layout(cfg);
+
+cfg = [];
+cfg.ylim = [1 15];
 cfg.zlim = 'maxmin';
 cfg.layout = layout;
-cfg.title = 'Task B: avg nonoccl';
-ft_multiplotTFR(cfg, freq_GAV_B.nonoccl);
+cfg.title = 'Task A: avg rand2';
+ft_multiplotTFR(cfg, freq_GAV.rand2);
