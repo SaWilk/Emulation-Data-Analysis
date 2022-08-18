@@ -194,10 +194,6 @@ close all
 cd(eeg_data_path);
 % get all set files in the folder
 files2read = {dir('*.set').name};
-% only get files for a for now
-% there is only merged a and b available, so this line is no longer needed.
-% Was for separating a and b task files.
-% files2read_a = files2read(~cellfun(@isempty, regexp(files2read,'_A_')));
 
 EEG = pop_loadset('filename', files2read);
 [ALLEEG, EEG, CURRENTSET] = eeg_store( ALLEEG, EEG, 0 );
@@ -246,6 +242,12 @@ subj_ids = subj_ids(tmp_idx);
 
 %% Insert Trial Start and End Events, Remove Practice Trials, Add Trial Number and Latency Fields
 % (Necessary cause Peaks are only given in Trial Latency)
+% TODO: The event field looks so terribly strange at this point. I wonder
+% who killed it. 
+size([eeg_struct(1).urevent.latency])
+size(unique([eeg_struct(1).urevent.latency]))
+
+
 
 %   "instruction":  10,
 %     "exp_start":    11,
@@ -400,7 +402,7 @@ for s = 1:size(eeg_struct,2)
             % add field: trial number
             if idx <= 72
                 trial_num = idx;
-            elseif 72 < idx <= 72*2
+            elseif (72 < idx) && (idx <= 72*2)
                 trial_num = idx - 72;
             else
                 trial_num = idx - 72*2;
@@ -421,7 +423,6 @@ for s = 1:size(eeg_struct,2)
     eeg_struct(s).track_event = event;
 
 end
-
 
 % Notes: 91L3HA is excluded because recording started too late.
 % WM87B is excluded cause there is no behavioral data.

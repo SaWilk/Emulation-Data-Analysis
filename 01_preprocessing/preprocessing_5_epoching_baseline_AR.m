@@ -94,6 +94,9 @@ base_lims_peaks = [-500 0];
 
 %% loop through files and save epoched data
 
+size(unique([TMPEEG.event.latency]))
+size([TMPEEG.event.latency],2) - sum(strcmp({TMPEEG.event.type} , 'S 15')) 
+
 for ind = 1:length(file_names)
     
     file_name = files2read{ind};
@@ -136,7 +139,7 @@ if ~strcmp(TMPEEG_A.subject, 'KMY6K') % skip subject 18 Task B cause it is only 
         char(savepath_baseline_occl));
 end
 
-        % epoch for peaks & remove baseline, long duration
+        % epoch for peaks & remove baseline 
     TMPEEG_peaks = pop_epoch(TMPEEG, { event_peaks }, epoch_lims_peaks,...
         'newname', TMPEEG.subject, 'epochinfo', 'yes');
     TMPEEG_peaks = eeg_checkset( TMPEEG_peaks );
@@ -164,7 +167,7 @@ end
     TMPEEG_B.setname = [set_name '_complete_preprocessing_withAR_B'];
     TMPEEG_B = pop_saveset(TMPEEG_B, 'filename', TMPEEG_B.setname, 'filepath', char(output_dir_AR_occl));
 
-    % artifact rejection long duration
+    % artifact rejection 
     TMPEEG_peaks = pop_jointprob(TMPEEG_peaks, 1, 1:TMPEEG_peaks.nbchan, 5, 5, 0 ,1);
     TMPEEG_peaks.comment = TMPEEG_peaks.comment + "  *** apply artifact rejection";
     TMPEEG_peaks.setname = [set_name '_complete_preprocessing_withAR_peaks'];

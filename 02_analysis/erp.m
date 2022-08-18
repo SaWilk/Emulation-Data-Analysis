@@ -63,11 +63,14 @@ mkdir(mean_matrices_path);
 mean_matrices_peaks_epoched_path = strjoin([mean_matrices_path, 'peaks'], filesep);
 mkdir(mean_matrices_peaks_epoched_path);
 
+peak_erp_plots_dir = strjoin([parent_dir, "plots", "erp_plots", "peaks"], filesep);
+mkdir(peak_erp_plots_dir);
+
 % neighbors dir
 neighbors_dir = strjoin([parent_dir_2, "Emulation-Data-Input", "EEG_files"], filesep);
 
 
-%% Load Epoched data 
+%% Load Epoched data
 
 eeglab;
 
@@ -77,36 +80,77 @@ cd(output_dir_AR_peaks);
 file_names = dir('*.set');
 %concatenate into one cell array
 files2read = {file_names.name};
-% load all eeg files
-% ALLEEG2 = struct();
+% load eeg data epoched around peaks
 for idx = 1:length(files2read)
-     ALLEEG2(idx) = pop_loadset('filename',files2read{idx});
-%      ALLEEG2(idx) = EEG;
+    ALLEEG2(idx) = pop_loadset('filename',files2read{idx});
 end
 
-% ALLEEG
-% 
-% pop_study
+ALLEEG = ALLEEG2;
+clear ALLEEG2
 
 
-%% Calculate Means Across Subjects 
+%% Calculate Means Across Subjects
 
-% TODO: Put the means in a structure. 
-% One mean each epoch across all subjects and conditions
-% One mean each epoch across all subjects and separate for constant/random
-% One mean each epoch across all subjects and separate for occluded/visible
 
-for i = 1:size(ALLEEG, 2) 
+count_peaks = 0;
+count_peaks_occ = 0;
+count_peaks_vis = 0;
+count_peaks_rand1 = 0;
+count_peaks_const = 0;
+count_peaks_rand2 = 0;
 
-    EEG = epochs(i);
-    mean_struct.all(:,:,i) = mean(EEG.data,3);
-    mean_struct.all_time_vec = EEG.times;
-%     EEG = OCC_ALLEEG(i);
-%     % TODO: assign here the data from the different occlusion event structs
-%     mean_struct.occ(:,:,i) = mean(EEG.data,3);
-%     mean_struct.vis(:,:,i) = mean(EEG.data,3);
-%     
-%     mean_struct.occ_time_vec = EEG.times;
+for s = 1:size(ALLEEG, 2)
+
+    EEG = ALLEEG(s);
+    % all conditions
+    mean_struct.all(:,:,s) = mean(EEG.data,3);
+    % get indices of peaks in event structure that also belong to a certain
+    % condition
+    occl_off_log = false(size(EEG.event,2),1);
+    occl_on_log = false(size(EEG.event,2),1);
+    traj_rand1_log = false(size(EEG.event,2),1);
+    traj_const_log = false(size(EEG.event,2),1);
+    traj_rand2_log = false(size(EEG.event,2),1);
+
+    for ev = 1:size(EEG.event,2)
+        % occlusion
+        occl_off_log(ev) = strcmp(EEG.event(ev).type, 'S 40') && strcmp(EEG.event(ev).OCCL, 'OFF');
+        occl_on_log(ev) = strcmp(EEG.event(ev).type, 'S 40') && strcmp(EEG.event(ev).OCCL, 'ON');
+        % constant
+        traj_rand1_log(ev) = strcmp(EEG.event(ev).type, 'S 40') && strcmp(EEG.event(ev).TRAJ, 'RANDOM1');
+        traj_const_log(ev) = strcmp(EEG.event(ev).type, 'S 40') && strcmp(EEG.event(ev).TRAJ, 'CONST');
+        traj_rand2_log(ev) = strcmp(EEG.event(ev).type, 'S 40') && strcmp(EEG.event(ev).TRAJ, 'RANDOM2');
+    end
+
+    % get epoch numbers for respective conditions
+    cond_ind(s).epoch_vis = unique([EEG.event(occl_off_log).epoch]);
+    cond_ind(s).epoch_occ = unique([EEG.event(occl_on_log).epoch]);
+    cond_ind(s).epoch_rand1 = unique([EEG.event(traj_rand1_log).epoch]);
+    cond_ind(s).epoch_const = unique([EEG.event(traj_const_log).epoch]);
+    cond_ind(s).epoch_rand2 = unique([EEG.event(traj_rand2_log).epoch]);
+
+    % calculate mean across condition
+    mean_struct.occ_off(:,:,s) = mean(EEG.data(:,:,cond_ind(s).epoch_vis),3);
+    mean_struct.occ_on(:,:,s) = mean(EEG.data(:,:,cond_ind(s).epoch_occ),3);
+    mean_struct.rand1(:,:,s) = mean(EEG.data(:,:,cond_ind(s).epoch_rand1),3);
+    mean_struct.const(:,:,s) = mean(EEG.data(:,:,cond_ind(s).epoch_const),3);
+    mean_struct.rand2(:,:,s) = mean(EEG.data(:,:,cond_ind(s).epoch_rand2),3);
+
+    % calculate contrasts by simple subtraction
+    mean_struct.diff_occ = mean_struct.occ_off(:,:,s) - mean_struct.occ_on(:,:,s);
+    mean_struct.diff_const_rand1 = mean_struct.const(:,:,s) - mean_struct.rand1(:,:,s);
+    mean_struct.diff_const_rand2 = mean_struct.const(:,:,s) - mean_struct.rand2(:,:,s);
+
+    % get time vec
+    mean_struct.time_vec = EEG.times;
+
+    % add peaks to know how much power each condition has
+    count_peaks = size(EEG.data, 3) + count_peaks;
+    count_peaks_occ = size(EEG.data(:,:,cond_ind(s).epoch_occ), 3) + count_peaks_occ;
+    count_peaks_vis = size(EEG.data(:,:,cond_ind(s).epoch_vis), 3) + count_peaks_vis;
+    count_peaks_rand1 = size(EEG.data(:,:,cond_ind(s).epoch_rand1), 3) + count_peaks_rand1;
+    count_peaks_const = size(EEG.data(:,:,cond_ind(s).epoch_const), 3) + count_peaks_const;
+    count_peaks_rand2 = size(EEG.data(:,:,cond_ind(s).epoch_rand2), 3) + count_peaks_rand2;
 
 end
 
@@ -115,94 +159,285 @@ end
 
 cd(mean_matrices_peaks_epoched_path)
 save("mean_struct.mat", 'mean_struct')
+save("condition_indices.mat", 'cond_ind')
 
 
-%% Load Previously Generated Mean Structures
+%% Prepare for ERP Plotting
 
 cd(mean_matrices_peaks_epoched_path)
 
 load('mean_struct.mat')
 
-
-%% Plot ERPs as grand average
-
-
 avg_peak_dist = 300;
+% average across subjects
+epoch_mean_all = mean(mean_struct.all,3);
+epoch_mean_occ = mean(mean_struct.occ_on,3, 'omitnan'); % omitnan is
+% % necessary because subject 18 has no task B
+epoch_mean_vis = mean(mean_struct.occ_off,3);
+epoch_mean_rand1 = mean(mean_struct.rand1,3);
+epoch_mean_const = mean(mean_struct.const,3);
+epoch_mean_rand2 = mean(mean_struct.rand2,3);
 
-epoch_mean = mean(mean_struct.all(:,:,:),3);
+base_dur = 500;
 
-[~, min_ind] = min(epoch_mean,[],'all');
-[min_ind(1), min_ind(2)] = ind2sub(size(epoch_mean), min_ind)
+
+%% Plot ERPs as grand average and save plots
+
+
+cd(peak_erp_plots_dir)
+
 % Average ERP Plots
+title_string = strcat(...
+    ['ERP of all subjects averaged across epochs around peaks, n = ', ...
+    num2str(count_peaks), ' epochs']);
+subtitle_string = strcat(['all channels']);
 figure()
-% long epochs
-
-[epoch_lims(1), epoch_lims(2)] = bounds(epochs(8).times)
-plot(mean_struct.all_time_vec, epoch_mean);
-title(strcat(['ERP of all subjects averaged across epochs around peaks, n ~= ', num2str( size(epochs(1).data,3)), ' per subject']));
-subtitle(strcat(['all channels, epochs from ', num2str(epoch_lims(1)), ' to ' num2str(epoch_lims(2))]))
-hold on
-h(1) = xline(0);
-h(2) = xline(mean_struct.all_time_vec(min_ind(2)), 'r');
-h(4:5) = xline([-avg_peak_dist,avg_peak_dist], 'b');
-h(3) = xline(epoch_lims(1)+500, 'g')
-legend(h, {'peak', 'error negativity peak',  'baseline period', 'average distance of next peak'});
-hold off
+[~, min_ind] = plot_ERP(epoch_mean_all, mean_struct.time_vec, base_dur, title_string, subtitle_string);
+savefig('all_condition_peaks_erp')
 
 % Single Channel ERP
-% Identify the electrode that shows the biggest amplitude in the ERP
-neg_time = 60; 
+% Pots the electrode that shows the biggest amplitude in the ERP
 
-[~, neg_time_idx] = min(abs(mean_struct.all_time_vec - neg_time));
-[~, min_chan_idx] = min(epoch_mean(:, neg_time_idx));
+min_chan_idx = min_ind(1);
+chan_lab = EEG.chanlocs(min_chan_idx).labels;
+title_string = strcat([...
+    'ERP of all subjects averaged across epochs around peaks']);
+subtitle_string = strcat(['channel ', chan_lab]);
+figure()
+plot_ERP(epoch_mean_all(min_chan_idx, :), mean_struct.time_vec, base_dur, title_string, subtitle_string)
+
+% Average ERP Plots occluded vs non-occluded
 
 figure()
+subplot(2, 1, 1)
+title_string = strcat(...
+    ['ERP of all subjects averaged across epochs around peaks, n = ', ...
+    num2str(count_peaks_vis), ' epochs']);
+subtitle_string = strcat(['all channels, only non-occluded']);
+[~, min_ind_vis] = plot_ERP(epoch_mean_vis, mean_struct.time_vec, base_dur, title_string, subtitle_string);
+ax1 = gca;
 
-chan_lab = EEG.chanlocs(min_chan_idx).labels;
-[epoch_lims(1), epoch_lims(2)] = bounds(epochs(8).times)
-plot(mean_struct.all_time_vec, mean(mean_struct.all(min_chan_idx,:,:),3));
-title(strcat(['ERP of all subjects averaged across epochs around peaks, channel ', chan_lab]));
-subtitle(strcat(['epochs from ', num2str(epoch_lims(1)), ' to ' num2str(epoch_lims(2))]))
-hold on
-h(1) = xline(0);
-h(2) = xline(mean_struct.all_time_vec(min_ind(2)), 'r');
-h(4:5) = xline([-avg_peak_dist,avg_peak_dist], 'b');
-h(3) = xline(epoch_lims(1)+500, 'g')
-legend(h, {'peak', 'error negativity peak',  'baseline period', 'average distance of next peak'});
-hold off
+subplot(2, 1, 2)
+title_string = strcat(...
+    ['ERP of all subjects averaged across epochs around peaks, n = ', ...
+    num2str(count_peaks_occ), ' epochs']);
+subtitle_string = strcat(['all channels, only occluded']);
+[~, min_ind_occ] = plot_ERP(epoch_mean_occ, mean_struct.time_vec, base_dur, title_string, subtitle_string);
+ax2 = gca;
+linkaxes([ax1 ax2],'xy')
 
 
-%% Create Topoplot of the time points of interest 
+savefig('occlusion_vs_visible_peaks_erp')
 
-epoch_mean = mean(mean_struct.all(:,:,:),3);
+% Average ERP Plots constant vs random
 
-latencies_onset = linspace(0, 725, 30);
-latencies_offset = latencies_onset + 25;
-% doc topoplot: https://rdrr.io/cran/erpR/man/topoplot.html
+figure()
+subplot(3, 1, 1)
+title_string = strcat(...
+    ['ERP of all subjects averaged across epochs around peaks, n = ', ...
+    num2str(count_peaks_const), ' epochs']);
+subtitle_string = strcat(['all channels, only constant']);
+[~, min_ind_const] = plot_ERP(epoch_mean_const, mean_struct.time_vec, base_dur, title_string, subtitle_string);
+ax1 = gca;
+subplot(3, 1, 2)
+title_string = strcat(...
+    ['ERP of all subjects averaged across epochs around peaks, n = ', ...
+    num2str(count_peaks_rand1), ' epochs']);
+subtitle_string = strcat(['all channels, only random1']);
+[~, min_ind_rand1] = plot_ERP(epoch_mean_rand1, mean_struct.time_vec, base_dur, title_string, subtitle_string);
+ax2 = gca;
+
+subplot(3, 1, 3)
+title_string = strcat(...
+    ['ERP of all subjects averaged across epochs around peaks, n = ', ...
+    num2str(count_peaks_rand2), ' epochs']);
+subtitle_string = strcat(['all channels, only random2']);
+[~, min_ind_rand2] = plot_ERP(epoch_mean_rand2, mean_struct.time_vec, base_dur, title_string, subtitle_string);
+ax3 = gca;
+
+linkaxes([ax1 ax2 ax3],'xy')
+savefig('constant_vs_random_peaks_erp')
+
+
+%% Plot Contrasts of ERPS as simple subtractions and save plots
+
+% seems pretty useless. 
+
+% Average ERP Plots
+figure()
+title_string = strcat(...
+    ['ERP-difference of all subjects averaged across epochs around peaks']);
+subtitle_string = strcat(['all channels, non-occluded - occluded']);
+figure()
+[~, min_ind] = plot_ERP(diff_occ, mean_struct.time_vec, base_dur, title_string, subtitle_string);
+savefig('diff_occ_vis')
+
+% Average ERP Plots
+figure()
+subplot(2, 1, 1)
+title_string = strcat(...
+    ['ERP-difference of all subjects averaged across epochs around peaks']);
+subtitle_string = strcat(['all channels, constat - random1']);
+[~, min_ind] = plot_ERP(diff_const_rand1, mean_struct.time_vec, base_dur, title_string, subtitle_string);
+ax1 = gca;
+linkaxes([ax1 ax2],'xy')
+
+subplot(2, 1, 2)
+title_string = strcat(...
+    ['ERP-difference of all subjects averaged across epochs around peaks']);
+subtitle_string = strcat(['all channels, constat - random2']);
+[~, min_ind] = plot_ERP(diff_const_rand2, mean_struct.time_vec, base_dur, title_string, subtitle_string);
+ax2 = gca;
+linkaxes([ax1 ax2],'xy')
+savefig('diff_const_rand')
+
+
+%% Prepare for Topoplotting
+
+cd(mean_matrices_peaks_epoched_path)
+
+load('mean_struct.mat')
+
+avg_peak_dist = 300;
+% average across subjects
+epoch_mean_all = mean(mean_struct.all,3);
+epoch_mean_occ = mean(mean_struct.occ_on,3, 'omitnan'); % omitnan is
+% % necessary because subject 18 has no task B
+epoch_mean_vis = mean(mean_struct.occ_off,3);
+epoch_mean_rand1 = mean(mean_struct.rand1,3);
+epoch_mean_const = mean(mean_struct.const,3);
+epoch_mean_rand2 = mean(mean_struct.rand2,3);
+
+base_dur = 500;
+num_topos = 15;
+latencies_onset = linspace(0, 700, num_topos);
+latencies_offset = latencies_onset + 50;
 
 % extract means across 50 ms periods for topoplot
 for i = 1:length(latencies_onset)
 
-    [~, lat_idx_onset] = min(abs(mean_struct.all_time_vec - latencies_onset(i)));
-    [~, lat_idx_offset] = min(abs(mean_struct.all_time_vec - latencies_offset(i)));
-    topo_mean(:, i) = mean(epoch_mean(:,lat_idx_onset:lat_idx_offset), 2);
+    [~, lat_idx_onset] = min(abs(mean_struct.time_vec - latencies_onset(i)));
+    [~, lat_idx_offset] = min(abs(mean_struct.time_vec - latencies_offset(i)));
+    topo_struct.all(:, i) = mean(epoch_mean_all(:,lat_idx_onset:lat_idx_offset), 2);
+    topo_struct.vis(:, i) = mean(epoch_mean_vis(:,lat_idx_onset:lat_idx_offset), 2);
+    topo_struct.occ(:, i) = mean(epoch_mean_occ(:,lat_idx_onset:lat_idx_offset), 2);
+    topo_struct.const(:, i) = mean(epoch_mean_const(:,lat_idx_onset:lat_idx_offset), 2);
+    topo_struct.rand1(:, i) = mean(epoch_mean_rand1(:,lat_idx_onset:lat_idx_offset), 2);
+    topo_struct.rand2(:, i) = mean(epoch_mean_rand2(:,lat_idx_onset:lat_idx_offset), 2);
+    topo_struct.diff_occ(:, i) = mean(mean_struct.diff_occ(:,lat_idx_onset:lat_idx_offset), 2);
+    topo_struct.diff_const_rand1(:, i) = mean(mean_struct.diff_const_rand1(:,lat_idx_onset:lat_idx_offset), 2);
+    topo_struct.diff_const_rand2(:, i) = mean(mean_struct.diff_const_rand2(:,lat_idx_onset:lat_idx_offset), 2);
 
 end
 
-zlims = [min(topo_mean, [], 'all'), max(topo_mean, [], 'all')]';
-EEG = ALLEEG(1)
+chan_locs = ALLEEG(1).chanlocs
 
+
+%% Create Topoplot of the time points of interest
+
+cd(peak_erp_plots_dir)
+
+% doc topoplot: https://rdrr.io/cran/erpR/man/topoplot.html
+
+% all conditions
 figure()
+zlims = [min(topo_struct.all, [], 'all'), max(topo_struct.all, [], 'all')]';
 for i = 1:length(latencies_onset)
 
-    subplot(6, 5, i)
-    topoplot(topo_mean(:, i), EEG.chanlocs, 'maplimits',  zlims)
-    title('epochs around peaks all subjects all trials, long epochs')
-    subtitle(strcat(['latency range: average of ', num2str(latencies_onset(i)), ' to ', ...
+    subplot(num_topos/5, num_topos/3, i)
+    topoplot(topo_struct.all(:, i), chan_locs, 'maplimits',  zlims)
+    title(strcat(['average of ', num2str(latencies_onset(i)), ' to ', ...
         num2str(latencies_offset(i)), ' ms']))
     colorbar()
-
 end
+sgtitle('epochs around peaks all subjects all trials')
+
+savefig('all_condition_peaks_topo')
+
+
+% occlusion vs non-occlusion
+figure();
+zlims = [min([topo_struct.occ,topo_struct.vis] , [], 'all'), max([topo_struct.occ,topo_struct.vis], [], 'all')]';
+rows = 5;
+cols = 7;
+sub = [1:3, 8:10, 15:17, 22:24, 29:31];
+sub2 = [5:7, 12:14, 19:21, 26:28, 33:35];
+subvec = [sub; sub2];
+subvec = subvec(:);
+pos = 0;
+for i = 1:length(latencies_onset)
+    pos =  1 + pos;
+    subplot(rows, cols, subvec(pos));
+    topoplot(topo_struct.occ(:, i), chan_locs, 'maplimits',  zlims);
+    title('occluded');
+    subtitle(strcat(['average of ', num2str(latencies_onset(i)), ' to ', ...
+        num2str(latencies_offset(i)), ' ms']));
+    colorbar();
+    pos =  1 + pos;
+    subplot(rows, cols, subvec(pos));
+    topoplot(topo_struct.vis(:, i), chan_locs, 'maplimits',  zlims);
+    title('visible');
+    subtitle(strcat(['average of ', num2str(latencies_onset(i)), ' to ', ...
+        num2str(latencies_offset(i)), ' ms']));
+    colorbar();
+end
+sgtitle("peak epoch ERPs: occlusion (left) vs non-occlusion (right)");
+savefig('occclusion_vs_visible_peaks_topo');
+
+
+% constant vs random
+figure();
+zlims = [min([topo_struct.const,topo_struct.rand1,topo_struct.rand2] , [], 'all'), ...
+    max([topo_struct.const,topo_struct.rand1,topo_struct.rand2], [], 'all')]';
+rows = 5;
+cols = 11;
+sub = [1:3, 12:14, 23:25, 34:36, 45:47];
+sub2 = [5:7, 16:18, 27:29, 38:40, 49:51];
+sub3 = [9:11, 20:22, 31:33, 42:44, 53:55];
+subvec = [sub; sub2; sub3];
+subvec = subvec(:);
+pos = 0;
+for i = 1:length(latencies_onset)
+    pos =  1 + pos;
+    subplot(rows, cols, subvec(pos));
+    topoplot(topo_struct.const(:, i), chan_locs, 'maplimits',  zlims);
+    title('constant');
+    subtitle(strcat(['average of ', num2str(latencies_onset(i)), ' to ', ...
+        num2str(latencies_offset(i)), ' ms']));
+    colorbar();
+    pos =  1 + pos;
+    subplot(rows, cols, subvec(pos));
+    topoplot(topo_struct.rand1(:, i), chan_locs, 'maplimits',  zlims);
+    title('random1');
+    subtitle(strcat(['average of ', num2str(latencies_onset(i)), ' to ', ...
+        num2str(latencies_offset(i)), ' ms']));
+    colorbar();
+    pos =  1 + pos;
+    subplot(rows, cols, subvec(pos));
+    topoplot(topo_struct.rand2(:, i), chan_locs, 'maplimits',  zlims);
+    title('random2');
+    subtitle(strcat(['average of ', num2str(latencies_onset(i)), ' to ', ...
+        num2str(latencies_offset(i)), ' ms']));
+    colorbar();
+end
+sgtitle("peak epochs: constant (left) vs random1 (middle) vs random2 (right)");
+savefig('constant_vs_random_peaks_topo');
+
+
+% difference of occ vs vis
+figure()
+zlims = [min(topo_struct.diff_occ, [], 'all'), max(topo_struct.diff_occ, [], 'all')]';
+for i = 1:length(latencies_onset)
+
+    subplot(num_topos/5, num_topos/3, i)
+    topoplot(topo_struct.diff_occ(:, i), chan_locs, 'maplimits',  zlims);
+    title(strcat(['average of ', num2str(latencies_onset(i)), ' to ', ...
+        num2str(latencies_offset(i)), ' ms']))
+    colorbar()
+end
+sgtitle('peak epoch ERP differences: visible - occluded')
+
+savefig('diff_occ_vis_peaks_topo')
 
 
 %% Load Study
@@ -219,7 +454,7 @@ end
 % [STUDY neighbors] = std_prepare_neighbors( STUDY, ALLEEG)
 load(strjoin([neighbors_dir, 'fieldtrip_EEG_KJP_neighbours_61.mat'], filesep))
 % stat_cond
-% TODO: Add a condition in which all data is zero by copying the data and 
+% TODO: Add a condition in which all data is zero by copying the data and
 
 eeglab redraw
 
@@ -229,7 +464,7 @@ cd(mean_matrices_peaks_epoched_path)
 
 load('mean_struct.mat')
 
-minimal_latency = mean_struct.all_time_vec(min_ind(2)); % the point in which 
+minimal_latency = mean_struct.time_vec(min_ind(2)); % the point in which
 % % the signal is as negative as possible
 
 peak_eeg = mean_struct.all;
@@ -247,11 +482,11 @@ peak_across_subj_min_lat = peak_across_subj(:,minimal_latency);
 
 
 For example, to compute mean ERPs statistics from a
-            STUDY for epochs of 800 frames in two conditions from three
-            groups of 12 subjects:
- 
-            >> erp_data_for_all_subjects_possibly_from_STUDY = { [800x12] [800x12] [800x12];... % 3 groups, cond 1
-                    [800x12] [800x12] [800x12] };  % 3 groups, cond 2
+STUDY for epochs of 800 frames in two conditions from three
+groups of 12 subjects:
+
+>> erp_data_for_all_subjects_possibly_from_STUDY = { [800x12] [800x12] [800x12];... % 3 groups, cond 1
+    [800x12] [800x12] [800x12] };  % 3 groups, cond 2
 [pcond, pgroup, pinter, statscond, statsgroup, statsinter] = std_stat(...
     {peak_eeg; zero_eeg}, 'groupstats', 'off', ...
     'condstats', 'off', 'method', 'permutation', 'naccu', '1000', 'alpha', '0.9', ...
@@ -262,12 +497,12 @@ For example, to compute mean ERPs statistics from a
 % 'fieldtripclusterparam' string or cell array for optional parameters
 %                              for cluster correction method, see function
 %                              ft_statistics_montecarlo for more information.
-%    'fieldtripchannelneighbor' - Fieldtrip channel neighbour structure for 
+%    'fieldtripchannelneighbor' - Fieldtrip channel neighbour structure for
 %                                 cluster correction method, see function
 %                                 std_prepare_neighbors for more information.
-% use this to find the electrode cluster 
-% In EEGLAB 12, press the statistics button in the channel or component STUDY 
-% plotting interface. Then you can select cluster statistics (click on 
+% use this to find the electrode cluster
+% In EEGLAB 12, press the statistics button in the channel or component STUDY
+% plotting interface. Then you can select cluster statistics (click on
 % Fieldtrip, then select monte-carlo statistics, then select cluster correction).
 % It works as the other STUDY statistics.
 
@@ -303,45 +538,49 @@ ft_defaults;
 % elec.label = upper(elec.label);
 
 
-%% read data and change structure
-
-% load([input_path filesep 'freq_all_theta']);
-% long epochs
-cd(output_dir_AR_peaks);
-load(strjoin([neighbors_dir, 'fieldtrip_EEG_KJP_neighbours_61.mat'], filesep))
+%% Prepare Cluster Based Permutaiton Testing
 
 
+cd(mean_matrices_peaks_epoched_path)
+load("condition_indices.mat")
 
-% convert to fieldtrip
-for i = 1:length(ALLEEG2)
-    eeg_field(i) = eeglab2fieldtrip(ALLEEG2(i), 'timelockanalysis', 'none');
+% convert to fieldtrip:
+% all data, compare with zero
+for s = 1:length(ALLEEG)
+    all_eeg_field(s) = eeglab2fieldtrip(ALLEEG(s), 'timelockanalysis', 'none');
 end
-% plot(eeg_field(26).time, eeg_field(26).avg')
-
-zero_field = eeg_field; 
-for i = 1:length(eeg_field)
+zero_field = all_eeg_field;
+for i = 1:length(all_eeg_field)
     zero_field(i).avg = zeros(size(zero_field(i).avg));
+    zero_field(i).var = zeros(size(zero_field(i).avg));
+end
+for i = 1:length(all_eeg_field)
+    eeg_cell{i} = all_eeg_field(i);
+    zero_cell{i} = zero_field(i);
 end
 
-for i = 1:length(eeg_field)
-    eeg_cell{i} = eeg_field(i);
-    zero_cell{i} = zero_field(i);
+% Comparing Occlusion and Visible
+for s = 1:length(ALLEEG)
+    OCCEEG = ALLEEG(s);
+    OCCEEG.data = OCCEEG.data(:,:,cond_ind(s).epoch_occ);
+    % TODO: FOR SOME STRANGE REASON STOPS AT s = 2
+    occ_eeg_field(i) = eeglab2fieldtrip(OCCEEG, 'timelockanalysis', 'none');
 end
 
 % I NEED THIS: ALTERNATIVELY, I CAN GENERATE IT MYSELF
 % load('fieldtrip_EEG_KJP_elec_61');
 % load('fieldtrip_EEG_KJP_neighbours_61.mat');
-% this data is missing, Adriana will look it up late.r 
+% this data is missing, Adriana will look it up late.r
 % elec.label = upper(elec.label);
 
 % load(['C:\wilken\Emulation-Data-Input' filesep 'freq_all_theta']);
-% 
-% % was already here: 
+%
+% % was already here:
 % constant = cellfun(@(x) x.constant, freq_all, 'UniformOutput', false);
 % rand1 = cellfun(@(x) x.rand1, freq_all, 'UniformOutput', false);
 % rand2 = cellfun(@(x) x.rand2, freq_all, 'UniformOutput', false);
 % % freq all is a cell 1x32, each cell contains subject data and it is split
-% % in two cells, one for each condition. 
+% % in two cells, one for each condition.
 % erp_cond = mean_struct.all; % ??
 % zero_cond = zeros(size(mean_struct.all)); % ??
 
@@ -389,7 +628,7 @@ cfg.ivar                = 2;
 cfg.channel             = {'all'};
 cfg.avgovertime         = 'no';
 cfg.method              = 'montecarlo';
-cfg.statistic           = 'depsamplesT'; % really indepsamples??? With comparison against 0 
+cfg.statistic           = 'depsamplesT'; % really indepsamples??? With comparison against 0
 cfg.correctm            = 'cluster';
 cfg.clusteralpha        = calpha;               % 0.05;
 cfg.clusterstatistic    = 'maxsum';
@@ -400,14 +639,14 @@ cfg.clustertail         = 0;
 cfg.alpha               = alpha;               % 0.025;
 cfg.numrandomization    = 1000;
 cfg.latency             = latency; % time interval over which the experimental
-                                 % conditions must be compared (in seconds)
+% conditions must be compared (in seconds)
 
 stats = ft_timelockstatistics(cfg, eeg_cell{:}, zero_cell{:});
-% The field prob contains the proportion of draws from the permutation 
-% distribution with a maximum cluster-level statistic that is larger than 
+% The field prob contains the proportion of draws from the permutation
+% distribution with a maximum cluster-level statistic that is larger than
 % the cluster-level test statistic
 stats.prob
-stats.stat %  cluster-level test statistic (here with maxsum: the sum of 
+stats.stat %  cluster-level test statistic (here with maxsum: the sum of
 % the T-values in this cluster).
 
 %% Plot the CBP results Nicos Approach
@@ -433,18 +672,18 @@ ft_clusterplot(cfg, stats);
 sgtitle(strjoin(["Significant clusters, calpha = ", calpha, " alpha = ", alpha], ""));
 colorbar()
 
-% topoplot verwenden um t-werte der channels zu plotten 
+% topoplot verwenden um t-werte der channels zu plotten
 % 'mask' um nur überschwellige Werte anzuzeigen
 % Bedingungsvergleiche testen
 
 
 %% Plot the CBP Results website approach
 
-% To plot the results of the permutation test, we use the plotting function 
-% ft_topoplotER. In doing so, we will plot a topography of the difference 
-% between the two experimental conditions (FIC and FC). On top of that, and 
-% for each timestep of interest, we will highlight the sensors which are 
-% members of significant clusters. First, however, we must calculate the 
+% To plot the results of the permutation test, we use the plotting function
+% ft_topoplotER. In doing so, we will plot a topography of the difference
+% between the two experimental conditions (FIC and FC). On top of that, and
+% for each timestep of interest, we will highlight the sensors which are
+% members of significant clusters. First, however, we must calculate the
 % difference between conditions using ft_math.
 
 cfg    = [];
@@ -457,14 +696,14 @@ cfg.operation = 'subtract';
 cfg.parameter = 'avg';
 raweffectFICvsFC = ft_math(cfg, avgFIC, avgFC);
 
-% We then construct a boolean matrix indicating whether a channel/time point 
-% belongs to a cluster that we deem interesting to inspect. This matrix has 
-% size [Number_of_MEG_channels x Number_of_time_samples], like 
-% stat.posclusterslabelmat. We’ll make two such matrices: one for positive 
-% clusters (named pos), and one for negative (neg). All (channel,time)-pairs 
-% belonging to the large clusters whose probability of occurrence is 
-% sufficiently low in relation to the associated randomization distribution 
-% of clusterstats will be coded in the new boolean matrix as 1, and all those 
+% We then construct a boolean matrix indicating whether a channel/time point
+% belongs to a cluster that we deem interesting to inspect. This matrix has
+% size [Number_of_MEG_channels x Number_of_time_samples], like
+% stat.posclusterslabelmat. We’ll make two such matrices: one for positive
+% clusters (named pos), and one for negative (neg). All (channel,time)-pairs
+% belonging to the large clusters whose probability of occurrence is
+% sufficiently low in relation to the associated randomization distribution
+% of clusterstats will be coded in the new boolean matrix as 1, and all those
 % that don’t will be coded as 0.
 
 % Make a vector of all p-values associated with the clusters from ft_timelockstatistics.
@@ -481,19 +720,19 @@ neg_cluster_pvals = [stat.negclusters(:).prob];
 neg_clust         = find(neg_cluster_pvals < 0.025);
 neg               = ismember(stat.negclusterslabelmat, neg_clust);
 
-% Alternatively, we can manually select which clusters we want to plot. If 
-% we only want to see the extent of the first (i.e. most significant) 
+% Alternatively, we can manually select which clusters we want to plot. If
+% we only want to see the extent of the first (i.e. most significant)
 % positive and negative clusters, for instance, we can do so as follows:
 
 pos = stat.posclusterslabelmat == 1; % or == 2, or 3, etc.
 neg = stat.negclusterslabelmat == 1;
 
-% To plot a sequence of twenty topographic plots equally spaced between 0 and 
-% 1 second, we define the vector j of time steps. These time intervals 
-% correspond to the samples m in stat and in the variables pos. and neg. m 
+% To plot a sequence of twenty topographic plots equally spaced between 0 and
+% 1 second, we define the vector j of time steps. These time intervals
+% correspond to the samples m in stat and in the variables pos. and neg. m
 % and j must, therefore, have the same length.
 
-% To be sure that your sample-based time windows align with your time windows 
+% To be sure that your sample-based time windows align with your time windows
 % in seconds, check the following:
 
 timestep      = 0.05; % timestep between time windows for each subplot (in seconds)
@@ -509,35 +748,35 @@ To plot the data use the following for-loop:
 [i1,i2] = match_str(raweffectFICvsFC.label, stat.label);
 
 for k = 1:20
-   subplot(4,5,k);
-   cfg = [];
-   cfg.xlim = [j(k) j(k+1)];   % time interval of the subplot
-   cfg.zlim = [-2.5e-13 2.5e-13];
-   % If a channel is in a to-be-plotted cluster, then
-   % the element of pos_int with an index equal to that channel
-   % number will be set to 1 (otherwise 0).
+    subplot(4,5,k);
+    cfg = [];
+    cfg.xlim = [j(k) j(k+1)];   % time interval of the subplot
+    cfg.zlim = [-2.5e-13 2.5e-13];
+    % If a channel is in a to-be-plotted cluster, then
+    % the element of pos_int with an index equal to that channel
+    % number will be set to 1 (otherwise 0).
 
-   % Next, check which channels are in the clusters over the
-   % entire time interval of interest.
-   pos_int = zeros(numel(raweffectFICvsFC.label),1);
-   neg_int = zeros(numel(raweffectFICvsFC.label),1);
-   pos_int(i1) = all(pos(i2, m(k):m(k+1)), 2);
-   neg_int(i1) = all(neg(i2, m(k):m(k+1)), 2);
+    % Next, check which channels are in the clusters over the
+    % entire time interval of interest.
+    pos_int = zeros(numel(raweffectFICvsFC.label),1);
+    neg_int = zeros(numel(raweffectFICvsFC.label),1);
+    pos_int(i1) = all(pos(i2, m(k):m(k+1)), 2);
+    neg_int(i1) = all(neg(i2, m(k):m(k+1)), 2);
 
-   cfg.highlight   = 'on';
-   % Get the index of the to-be-highlighted channel
-   cfg.highlightchannel = find(pos_int | neg_int);
-   cfg.comment     = 'xlim';
-   cfg.commentpos  = 'title';
-   cfg.layout      = 'CTF151_helmet.mat';
-   cfg.interactive = 'no';
-   cfg.figure      = 'gca'; % plots in the current axes, here in a subplot
-   ft_topoplotER(cfg, raweffectFICvsFC);
+    cfg.highlight   = 'on';
+    % Get the index of the to-be-highlighted channel
+    cfg.highlightchannel = find(pos_int | neg_int);
+    cfg.comment     = 'xlim';
+    cfg.commentpos  = 'title';
+    cfg.layout      = 'CTF151_helmet.mat';
+    cfg.interactive = 'no';
+    cfg.figure      = 'gca'; % plots in the current axes, here in a subplot
+    ft_topoplotER(cfg, raweffectFICvsFC);
 end
-% In this for-loop, cfg.xlim defines the time interval of each subplot. The 
-% variables pos_int and neg_int boolean vectors indicating which channels of 
-% pos and neg are significant in the time interval of interest. This is 
-% defined in cfg.highlightchannel. The for-loop plots 20 subplots covering a 
+% In this for-loop, cfg.xlim defines the time interval of each subplot. The
+% variables pos_int and neg_int boolean vectors indicating which channels of
+% pos and neg are significant in the time interval of interest. This is
+% defined in cfg.highlightchannel. The for-loop plots 20 subplots covering a
 % time interval of 50 ms each. Running this for-loop creates the following figure:
 
 %%
@@ -545,7 +784,7 @@ end
 %constant vs. rand2
 % calpha  = 0.05;
 % alpha   = 0.05;
-% 
+%
 % cfg                     = [];
 % cfg.design              = design;
 % cfg.uvar                = 1;
@@ -566,7 +805,7 @@ end
 % cfg.clustertail         = -1;
 % cfg.alpha               = alpha;               % 0.025;
 % cfg.numrandomization    = 1000;
-% 
+%
 % stats      = ft_freqstatistics(cfg, constant{:}, rand2{:} );
 
 
@@ -576,7 +815,7 @@ end
 % TODO: sort by error size in epoch
 % sort by
 '[STUDY ALLEEG] = std_editset( STUDY, ALLEEG, 'name','emulation_study_old','updatedat','on','rmclust','off' );
-     [STUDY ALLEEG] = std_checkset(STUDY, ALLEEG);'
+[STUDY ALLEEG] = std_checkset(STUDY, ALLEEG);'
 '[STUDY ALLEEG] = std_precomp(STUDY, ALLEEG, {},'savetrials','on','interp','on','recompute','on','erp','on','erpparams',{'rmbase' [-500 0] },'erpim','on','erpimparams',{'nlines' 10 'smoothing' 10});['' ...
     ''][STUDY EEG] = pop_savestudy( STUDY, EEG, 'filename','study_peaks_epoched.study','filepath','C:\\wilken\\Emulation-Data-Output\\study\\')
 std_erspplot(STUDY, ALLEEG)
@@ -595,7 +834,7 @@ addpath(genpath('C:\wilken\eeglab2019_0\CSDtoolbox'))
 % FAQ: https://psychophysiology.cpmc.columbia.edu/Software/CSDtoolbox/FAQ.html
 
 % Get usable list of electrodes from EEGlab data structure
-for site = 1:60 
+for site = 1:60
     trodes{site}=(ALLEEG(1).chanlocs(site).labels);
 end;
 trodes=trodes';
@@ -622,7 +861,7 @@ load G:\PhysioData\CSDmontage_64.mat;             % restore variables to the wor
 % FullName = [PathName FileName];
 % [ALLEEG EEG CURRENTSET ALLCOM] = eeglab;
 % EEG = pop_biosig(FullName, 'ref',[65 66] ,'blockepoch','off'); % Choose ref sites per your montage
-% [ALLEEG EEG CURRENTSET] = pop_newset(ALLEEG, EEG, 0,'gui','off'); 
+% [ALLEEG EEG CURRENTSET] = pop_newset(ALLEEG, EEG, 0,'gui','off');
 % eeglab redraw;
 
 tic                                        % stopwatch on
@@ -634,22 +873,22 @@ end
 looping_CSD_final = double(data);          % final CSD data
 looping_time = toc                         % stopwatch off
 
-data(:,:,:) = NaN;                         % re-initialize data output
+data = NaN;                         % re-initialize data output
 
 
-%% Stuff I tried out. 
+%% Stuff I tried out.
 
 STUDY = std_erpplot(STUDY,ALLEEG)
 
-% figure; 
+% figure;
 % pop_plottopo(EEG, [1:60] , ''5STJS'', 0, ''ydir'',1);
-% 
+%
 % pop_topoplot(EEG, 1, [-500 748] ,'5STJS',[1 2] ,0,'electrodes','on')
-% 
+%
 % pop_erpplot()
-% 
-% 
-% 
+%
+%
+%
 % https://www.fieldtriptoolbox.org/tutorial/cluster_permutation_timelock/
 
 
