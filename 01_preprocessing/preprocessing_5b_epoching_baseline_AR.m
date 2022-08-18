@@ -10,6 +10,8 @@
 % Adriana Böttcher
 % 13.07.22
 
+% adjusted 18.08.22: bigger epoch lims (at least 5s for wavelet analysis)
+
 %% clear workspace
 clear;
 clc;
@@ -53,9 +55,9 @@ files2read = {file_names.name};
 
 %% set parameters
 
-epoch_lims_trial = [-0.75 13];
-epoch_lims_traj = [0 3];
-epoch_lims_occl = [0 2];
+epoch_lims_trial = [-1 13];
+epoch_lims_traj = [-1 4]; %reduce later to [0 3]
+epoch_lims_occl = [-1 4]; %reduce later to [0 2]
 
 event_fixcross = 'S 26';
 event_traj = {'S 27' 'S 23' 'S 24' };
