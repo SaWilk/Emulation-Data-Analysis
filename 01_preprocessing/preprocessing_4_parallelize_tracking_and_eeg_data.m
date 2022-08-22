@@ -156,7 +156,6 @@ for s = 1:length(subj_ids)
             %         hold off
 
             % for now, I am just deleting the error columns
-            % TODO: adjust or re-calculate error in Matlab
             tmp_mat = [inter_time_vec; inter_traj_y; inter_purs_y].';
 
             for c = 1:size(tmp_mat, 2)
