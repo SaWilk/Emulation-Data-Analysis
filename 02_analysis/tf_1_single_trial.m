@@ -42,6 +42,11 @@ load subjects;
 conds_A = {'const', 'rand1', 'rand2'};
 conds_B = {'occl', 'nonoccl'};
 
+% variables for TFT
+gwidth  = 3;
+width   = 5;
+foi     = 1:1:35;
+
 %% task A
 % loop through conditions, then loop through subjects
 
@@ -62,9 +67,9 @@ for cond = 1:size(conds_A,2)
         % configuration for TFT
         cfg             = [];
         cfg.method      = 'wavelet';
-        cfg.width       = 5;
-        cfg.gwidth      = 3; % length of the used wavelets in standard deviations of the implicit Gaussian kernel
-        cfg.foi         = 1:1:15; % frequencies of interest
+        cfg.width       = width;
+        cfg.gwidth      = gwidth; % length of the used wavelets in standard deviations of the implicit Gaussian kernel
+        cfg.foi         = foi; % frequencies of interest
         cfg.toi         = data.time{1}; % use time field of data struct
         cfg.trials      = 'all'; % use all trials
         cfg.pad         = 'nextpow2'; %padding; rounds the maximum trial length up to the next power of 2
@@ -105,9 +110,9 @@ for cond = 1:size(conds_B,2)
         % configuration for TFT
         cfg             = [];
         cfg.method      = 'wavelet';
-        cfg.width       = 5;
-        cfg.gwidth      = 3; % length of the used wavelets in standard deviations of the implicit Gaussian kernel
-        cfg.foi         = 1:1:15; % frequencies of interest
+        cfg.width       = width;
+        cfg.gwidth      = gwidth; % length of the used wavelets in standard deviations of the implicit Gaussian kernel
+        cfg.foi         = foi; % frequencies of interest
         cfg.toi         = data.time{1}; % use time field of data struct
         cfg.trials      = 'all'; % use all trials
         cfg.pad         = 'nextpow2'; %padding; rounds the maximum trial length up to the next power of 2
