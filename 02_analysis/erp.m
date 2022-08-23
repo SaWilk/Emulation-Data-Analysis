@@ -91,6 +91,7 @@ clear ALLEEG2
 
 %% Calculate Means Across Subjects
 
+<<<<<<< Updated upstream
 
 count_peaks = 0;
 count_peaks_occ = 0;
@@ -98,12 +99,24 @@ count_peaks_vis = 0;
 count_peaks_rand1 = 0;
 count_peaks_const = 0;
 count_peaks_rand2 = 0;
+=======
+count_peaks.all = 0;
+count_peaks.occ = 0;
+count_peaks.vis = 0;
+count_peaks.rand1 = 0;
+count_peaks.const = 0;
+count_peaks.rand2 = 0;
+>>>>>>> Stashed changes
 
 for s = 1:size(ALLEEG, 2)
 
     EEG = ALLEEG(s);
     % all conditions
     mean_struct.all(:,:,s) = mean(EEG.data,3);
+    % get number of epochs per subject for weighting
+    z_mean_struct.num_epochs_all(s) = size(EEG.data, 3);
+    % z-normalized data
+    z_mean_struct.all(:, :, s) = normalize(mean_struct.all(:, :, s),2, 'zscore');
     % get indices of peaks in event structure that also belong to a certain
     % condition
     occl_off_log = false(size(EEG.event,2),1);
@@ -136,6 +149,20 @@ for s = 1:size(ALLEEG, 2)
     mean_struct.const(:,:,s) = mean(EEG.data(:,:,cond_ind(s).epoch_const),3);
     mean_struct.rand2(:,:,s) = mean(EEG.data(:,:,cond_ind(s).epoch_rand2),3);
 
+    % get z-normalized data
+    z_mean_struct.occ_off(:, :, s) = normalize(mean_struct.occ_off(:, :, s),2, 'zscore');
+    z_mean_struct.occ_on(:, :, s) = normalize(mean_struct.occ_on(:, :, s),2, 'zscore');
+    z_mean_struct.rand1(:, :, s) = normalize(mean_struct.rand1(:, :, s),2, 'zscore');
+    z_mean_struct.const(:, :, s) = normalize(mean_struct.const(:, :, s),2, 'zscore');
+    z_mean_struct.rand2(:, :, s) = normalize(mean_struct.rand2(:, :, s),2, 'zscore');
+
+    % get weights
+    z_mean_struct.num_epochs_occ_off(s) = size(EEG.data(:,:,cond_ind(s).epoch_vis), 3);
+    z_mean_struct.num_epochs_occ_on(s) = size(EEG.data(:,:,cond_ind(s).epoch_occ), 3);
+    z_mean_struct.num_epochs_rand1(s) = size(EEG.data(:,:,cond_ind(s).epoch_rand1), 3);
+    z_mean_struct.num_epochs_const(s) = size(EEG.data(:,:,cond_ind(s).epoch_const), 3);
+    z_mean_struct.num_epochs_rand2(s) = size(EEG.data(:,:,cond_ind(s).epoch_rand2), 3);
+
     % calculate contrasts by simple subtraction
     mean_struct.diff_occ = mean_struct.occ_off(:,:,s) - mean_struct.occ_on(:,:,s);
     mean_struct.diff_const_rand1 = mean_struct.const(:,:,s) - mean_struct.rand1(:,:,s);
@@ -154,12 +181,37 @@ for s = 1:size(ALLEEG, 2)
 
 end
 
+epoch_weights = z_mean_struct.num_epochs_all/mean(z_mean_struct.num_epochs_all);
+epoch_weights_occ_on = z_mean_struct.num_epochs_all/mean(z_mean_struct.num_epochs_occ_on);
+epoch_weights_occ_off = z_mean_struct.num_epochs_all/mean(z_mean_struct.num_epochs_occ_off);
+epoch_weights_rand1 = z_mean_struct.num_epochs_all/mean(z_mean_struct.num_epochs_rand1);
+epoch_weights_const = z_mean_struct.num_epochs_all/mean(z_mean_struct.num_epochs_const);
+epoch_weights_rand2 = z_mean_struct.num_epochs_all/mean(z_mean_struct.num_epochs_rand2);
+
+
+for ep = 1:size(z_mean_struct.all, 3)
+
+    z_mean_struct.all(:,:,ep) = z_mean_struct.all(:,:,ep) * epoch_weights(ep);
+    z_mean_struct.occ_on(:,:,ep) = z_mean_struct.occ_on(:,:,ep) * epoch_weights_occ_on(ep);
+    z_mean_struct.occ_off(:,:,ep) = z_mean_struct.occ_off(:,:,ep) * epoch_weights_occ_off(ep);
+    z_mean_struct.rand1(:,:,ep) = z_mean_struct.rand1(:,:,ep) * epoch_weights_rand1(ep);
+    z_mean_struct.const(:,:,ep) = z_mean_struct.const(:,:,ep) * epoch_weights_const(ep);
+    z_mean_struct.rand2(:,:,ep) = z_mean_struct.rand2(:,:,ep) * epoch_weights_rand2(ep);
+
+end
+
 
 %% Save the Mean Matrices for Convenient Loading
 
 cd(mean_matrices_peaks_epoched_path)
 save("mean_struct.mat", 'mean_struct')
 save("condition_indices.mat", 'cond_ind')
+<<<<<<< Updated upstream
+=======
+save("count_peaks.mat", 'count_peaks')
+save("z_mean_struct.mat", 'z_mean_struct')
+
+>>>>>>> Stashed changes
 
 
 %% Prepare for ERP Plotting
@@ -178,7 +230,26 @@ epoch_mean_rand1 = mean(mean_struct.rand1,3);
 epoch_mean_const = mean(mean_struct.const,3);
 epoch_mean_rand2 = mean(mean_struct.rand2,3);
 
+load('z_mean_struct.mat')
+
+% get z-weighted mean for all subjects
+z_epoch_mean_all = mean(z_mean_struct.all,3);
+z_epoch_mean_occ_on = mean(z_mean_struct.occ_on,3, 'omitnan');
+z_epoch_mean_occ_off = mean(z_mean_struct.occ_off,3, 'omitnan');
+z_epoch_mean_rand1 = mean(z_mean_struct.rand1,3);
+z_epoch_mean_const = mean(z_mean_struct.const,3);
+z_epoch_mean_rand2 = mean(z_mean_struct.rand2,3);
+
+
 base_dur = 500;
+
+title_string = strcat(...
+    ['ERP of all subjects averaged across epochs around peaks, n = ', ...
+    num2str(count_peaks.all), ' epochs']);
+title_string_z = strcat(...
+    ['z-normalized ERP of all subjects averaged across epochs around peaks, n = ', ...
+    num2str(count_peaks.all), ' epochs']);
+subtitle_string = strcat(['all channels']);
 
 
 %% Plot ERPs as grand average and save plots
@@ -187,47 +258,87 @@ base_dur = 500;
 cd(peak_erp_plots_dir)
 
 % Average ERP Plots
+<<<<<<< Updated upstream
 title_string = strcat(...
     ['ERP of all subjects averaged across epochs around peaks, n = ', ...
     num2str(count_peaks), ' epochs']);
 subtitle_string = strcat(['all channels']);
+=======
+
+>>>>>>> Stashed changes
 figure()
 [~, min_ind] = plot_ERP(epoch_mean_all, mean_struct.time_vec, base_dur, title_string, subtitle_string);
 savefig('all_condition_peaks_erp')
 
+cd(peak_erp_plots_dir)
+
+% Average ERP Plots of z-score
+
+figure()
+[~, min_ind] = plot_ERP(z_epoch_mean_all, mean_struct.time_vec, base_dur, title_string_z, subtitle_string);
+savefig('all_condition_peaks_erp_z')
+
 % Single Channel ERP
-% Pots the electrode that shows the biggest amplitude in the ERP
+% Plots the electrode that shows the biggest amplitude in the ERP
 
 min_chan_idx = min_ind(1);
 chan_lab = EEG.chanlocs(min_chan_idx).labels;
-title_string = strcat([...
-    'ERP of all subjects averaged across epochs around peaks']);
 subtitle_string = strcat(['channel ', chan_lab]);
 figure()
 plot_ERP(epoch_mean_all(min_chan_idx, :), mean_struct.time_vec, base_dur, title_string, subtitle_string)
+% TODO: Instead plot the electrode with the largest t-value in the CBP test
 
 % Average ERP Plots occluded vs non-occluded
 
 figure()
 subplot(2, 1, 1)
+<<<<<<< Updated upstream
 title_string = strcat(...
     ['ERP of all subjects averaged across epochs around peaks, n = ', ...
     num2str(count_peaks_vis), ' epochs']);
+=======
+>>>>>>> Stashed changes
 subtitle_string = strcat(['all channels, only non-occluded']);
 [~, min_ind_vis] = plot_ERP(epoch_mean_vis, mean_struct.time_vec, base_dur, title_string, subtitle_string);
 ax1 = gca;
 
 subplot(2, 1, 2)
+<<<<<<< Updated upstream
 title_string = strcat(...
     ['ERP of all subjects averaged across epochs around peaks, n = ', ...
     num2str(count_peaks_occ), ' epochs']);
+=======
+>>>>>>> Stashed changes
 subtitle_string = strcat(['all channels, only occluded']);
 [~, min_ind_occ] = plot_ERP(epoch_mean_occ, mean_struct.time_vec, base_dur, title_string, subtitle_string);
 ax2 = gca;
 linkaxes([ax1 ax2],'xy')
 
-
 savefig('occlusion_vs_visible_peaks_erp')
+
+
+% Average ERP Plots of z-score occluded vs non-occluded
+
+figure()
+subplot(2, 1, 1)
+title_string_z = strcat(...
+    ['z-normalized ERP of all subjects averaged across epochs around peaks, n = ', ...
+    num2str(count_peaks.vis), ' epochs']);
+subtitle_string = strcat(['all channels, only non-occluded']);
+[~, min_ind_vis] = plot_ERP(z_epoch_mean_occ_off, mean_struct.time_vec, base_dur, title_string_z, subtitle_string);
+ax1 = gca;
+
+subplot(2, 1, 2)
+title_string_z = strcat(...
+    ['z-normalized ERP of all subjects averaged across epochs around peaks, n = ', ...
+    num2str(count_peaks.occ), ' epochs']);
+subtitle_string = strcat(['all channels, only occluded']);
+[~, min_ind_occ] = plot_ERP(z_epoch_mean_occ_on, mean_struct.time_vec, base_dur, title_string_z, subtitle_string);
+ax2 = gca;
+linkaxes([ax1 ax2],'xy')
+
+savefig('occlusion_vs_visible_peaks_erp_z')
+
 
 % Average ERP Plots constant vs random
 
