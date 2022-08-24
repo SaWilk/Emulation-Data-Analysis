@@ -91,22 +91,12 @@ clear ALLEEG2
 
 %% Calculate Means Across Subjects
 
-<<<<<<< Updated upstream
-
-count_peaks = 0;
-count_peaks_occ = 0;
-count_peaks_vis = 0;
-count_peaks_rand1 = 0;
-count_peaks_const = 0;
-count_peaks_rand2 = 0;
-=======
 count_peaks.all = 0;
 count_peaks.occ = 0;
 count_peaks.vis = 0;
 count_peaks.rand1 = 0;
 count_peaks.const = 0;
 count_peaks.rand2 = 0;
->>>>>>> Stashed changes
 
 for s = 1:size(ALLEEG, 2)
 
@@ -206,12 +196,8 @@ end
 cd(mean_matrices_peaks_epoched_path)
 save("mean_struct.mat", 'mean_struct')
 save("condition_indices.mat", 'cond_ind')
-<<<<<<< Updated upstream
-=======
 save("count_peaks.mat", 'count_peaks')
 save("z_mean_struct.mat", 'z_mean_struct')
-
->>>>>>> Stashed changes
 
 
 %% Prepare for ERP Plotting
@@ -240,8 +226,9 @@ z_epoch_mean_rand1 = mean(z_mean_struct.rand1,3);
 z_epoch_mean_const = mean(z_mean_struct.const,3);
 z_epoch_mean_rand2 = mean(z_mean_struct.rand2,3);
 
-
 base_dur = 500;
+
+load('count_peaks.mat')
 
 title_string = strcat(...
     ['ERP of all subjects averaged across epochs around peaks, n = ', ...
@@ -258,14 +245,6 @@ subtitle_string = strcat(['all channels']);
 cd(peak_erp_plots_dir)
 
 % Average ERP Plots
-<<<<<<< Updated upstream
-title_string = strcat(...
-    ['ERP of all subjects averaged across epochs around peaks, n = ', ...
-    num2str(count_peaks), ' epochs']);
-subtitle_string = strcat(['all channels']);
-=======
-
->>>>>>> Stashed changes
 figure()
 [~, min_ind] = plot_ERP(epoch_mean_all, mean_struct.time_vec, base_dur, title_string, subtitle_string);
 savefig('all_condition_peaks_erp')
@@ -292,23 +271,11 @@ plot_ERP(epoch_mean_all(min_chan_idx, :), mean_struct.time_vec, base_dur, title_
 
 figure()
 subplot(2, 1, 1)
-<<<<<<< Updated upstream
-title_string = strcat(...
-    ['ERP of all subjects averaged across epochs around peaks, n = ', ...
-    num2str(count_peaks_vis), ' epochs']);
-=======
->>>>>>> Stashed changes
 subtitle_string = strcat(['all channels, only non-occluded']);
 [~, min_ind_vis] = plot_ERP(epoch_mean_vis, mean_struct.time_vec, base_dur, title_string, subtitle_string);
 ax1 = gca;
 
 subplot(2, 1, 2)
-<<<<<<< Updated upstream
-title_string = strcat(...
-    ['ERP of all subjects averaged across epochs around peaks, n = ', ...
-    num2str(count_peaks_occ), ' epochs']);
-=======
->>>>>>> Stashed changes
 subtitle_string = strcat(['all channels, only occluded']);
 [~, min_ind_occ] = plot_ERP(epoch_mean_occ, mean_struct.time_vec, base_dur, title_string, subtitle_string);
 ax2 = gca;
@@ -357,7 +324,6 @@ title_string = strcat(...
 subtitle_string = strcat(['all channels, only random1']);
 [~, min_ind_rand1] = plot_ERP(epoch_mean_rand1, mean_struct.time_vec, base_dur, title_string, subtitle_string);
 ax2 = gca;
-
 subplot(3, 1, 3)
 title_string = strcat(...
     ['ERP of all subjects averaged across epochs around peaks, n = ', ...
@@ -551,6 +517,39 @@ sgtitle('peak epoch ERP differences: visible - occluded')
 savefig('diff_occ_vis_peaks_topo')
 
 
+% difference of const vs rand1
+figure()
+zlims = [min(topo_struct.diff_const_rand1, [], 'all'), max(topo_struct.diff_const_rand1, [], 'all')]';
+for i = 1:length(latencies_onset)
+
+    subplot(num_topos/5, num_topos/3, i)
+    topoplot(topo_struct.diff_const_rand1(:, i), chan_locs, 'maplimits',  zlims);
+    title(strcat(['average of ', num2str(latencies_onset(i)), ' to ', ...
+        num2str(latencies_offset(i)), ' ms']))
+    colorbar()
+end
+sgtitle('peak epoch ERP differences: constant - random1')
+
+savefig('diff_const_rand1_peaks_topo')
+
+
+% difference of const vs rand2
+figure()
+zlims = [min(topo_struct.diff_const_rand2, [], 'all'), max(topo_struct.diff_const_rand2, [], 'all')]';
+for i = 1:length(latencies_onset)
+
+    subplot(num_topos/5, num_topos/3, i)
+    topoplot(topo_struct.diff_const_rand2(:, i), chan_locs, 'maplimits',  zlims);
+    title(strcat(['average of ', num2str(latencies_onset(i)), ' to ', ...
+        num2str(latencies_offset(i)), ' ms']))
+    colorbar()
+end
+sgtitle('peak epoch ERP differences: constant - random2')
+
+savefig('diff_const_rand2_peaks_topo')
+
+
+
 %% Load Study
 
 [ STUDY ALLEEG ] = pop_loadstudy('filename', 'study_peaks_epoched.study', 'filepath', study_dir)
@@ -652,14 +651,16 @@ ft_defaults;
 %% Prepare Cluster Based Permutaiton Testing
 
 
+
 cd(mean_matrices_peaks_epoched_path)
 load("condition_indices.mat")
 
+% All data, compare with zero
 % convert to fieldtrip:
-% all data, compare with zero
 for s = 1:length(ALLEEG)
     all_eeg_field(s) = eeglab2fieldtrip(ALLEEG(s), 'timelockanalysis', 'none');
 end
+% creating a null condition dataset
 zero_field = all_eeg_field;
 for i = 1:length(all_eeg_field)
     zero_field(i).avg = zeros(size(zero_field(i).avg));
@@ -671,12 +672,35 @@ for i = 1:length(all_eeg_field)
 end
 
 % Comparing Occlusion and Visible
+% convert to fieldtrip:
 for s = 1:length(ALLEEG)
     OCCEEG = ALLEEG(s);
+    VISEEG = ALLEEG(s);
     OCCEEG.data = OCCEEG.data(:,:,cond_ind(s).epoch_occ);
-    % TODO: FOR SOME STRANGE REASON STOPS AT s = 2
-    occ_eeg_field(i) = eeglab2fieldtrip(OCCEEG, 'timelockanalysis', 'none');
+    VISEEG.data = VISEEG.data(:,:,cond_ind(s).epoch_vis);
+    occ_eeg_field(s) = eeglab2fieldtrip(OCCEEG, 'timelockanalysis', 'none');
+    vis_eeg_field(s) = eeglab2fieldtrip(VISEEG, 'timelockanalysis', 'none');
+    occ_cell{s} = occ_eeg_field(s);
+    vis_cell{s} = vis_eeg_field(s);
 end
+
+% Comparing Occlusion and Visible
+% convert to fieldtrip:
+for s = 1:length(ALLEEG)
+    CONSTEEG = ALLEEG(s);
+    RAND1EEG = ALLEEG(s);
+    RAND2EEG = ALLEEG(s);
+    CONSTEEG.data = CONSTEEG.data(:,:,cond_ind(s).epoch_occ);
+    RAND1EEG.data = RAND1EEG.data(:,:,cond_ind(s).epoch_vis);
+    RAND2EEG.data = RAND2EEG.data(:,:,cond_ind(s).epoch_vis);
+    const_eeg_field(s) = eeglab2fieldtrip(CONSTEEG, 'timelockanalysis', 'none');
+    rand1_eeg_field(s) = eeglab2fieldtrip(RAND1EEG, 'timelockanalysis', 'none');
+    rand2_eeg_field(s) = eeglab2fieldtrip(RAND2EEG, 'timelockanalysis', 'none');
+    const_cell{s} = const_eeg_field(s);
+    rand1_cell{s} = rand1_eeg_field(s);
+    rand2_cell{s} = rand2_eeg_field(s);
+end
+
 
 % I NEED THIS: ALTERNATIVELY, I CAN GENERATE IT MYSELF
 % load('fieldtrip_EEG_KJP_elec_61');
@@ -724,12 +748,11 @@ cfg_neighb.method = 'distance';
 neighbours        = neighbours % ft_prepare_neighbours(cfg_neighb, dataFC_LP);
 
 
-%%
 % CLUSTER TEST
 % erp vs zero
 calpha  = 0.001;
 alpha   = 0.001;
-latency = [0.18, 0.22];
+latency = [0.13, 0.265] ;
 
 % cfg is the configuraiton structure of fieldtrip
 cfg                     = [];
@@ -752,7 +775,22 @@ cfg.numrandomization    = 1000;
 cfg.latency             = latency; % time interval over which the experimental
 % conditions must be compared (in seconds)
 
+% all conditions agains zero
 stats = ft_timelockstatistics(cfg, eeg_cell{:}, zero_cell{:});
+
+% occlusion vs non-occlusion
+latency_occ = [0.158,0.292]  ;
+cfg.latency             = latency_occ;
+
+stats_occ = ft_timelockstatistics(cfg, occ_cell{:}, vis_cell{:});
+
+% constant vs random
+latency_const = 'all' ;
+cfg.latency             = latency_const;
+
+stats_rand1 = ft_timelockstatistics(cfg, const_cell{:}, rand1_cell{:});
+stats_rand2 = ft_timelockstatistics(cfg, const_cell{:}, rand2_cell{:});
+
 % The field prob contains the proportion of draws from the permutation
 % distribution with a maximum cluster-level statistic that is larger than
 % the cluster-level test statistic
@@ -765,6 +803,7 @@ stats.stat %  cluster-level test statistic (here with maxsum: the sum of
 % https://www.fieldtriptoolbox.org/tutorial/plotting/
 % https://github.com/fieldtrip/fieldtrip/blob/release/ft_topoplotER.m
 
+cd(peak_erp_plots_dir)
 
 % ft_prepare_layout
 load(strjoin([neighbors_dir, 'fieldtrip_EEG_KJP_layout_61.mat'], filesep))
@@ -775,13 +814,20 @@ cfg.layout = lay;
 cfg.highlightcolorpos         = [0 0 0.75];
 cfg.highlightcolorneg         = [0.75 0 0];
 % cfg.highlightsymbolseries     = ['x', 'x', 'x', 'x', 'x'];
-cfg.subplotsize    = [4, 4];
+cfg.subplotsize    = [5, 7];
 % cfg.saveaspng = "cluster_GO_19_pre.png";
 
-figure(2)
+figure()
 ft_clusterplot(cfg, stats);
-sgtitle(strjoin(["Significant clusters, calpha = ", calpha, " alpha = ", alpha], ""));
-colorbar()
+sgtitle(strjoin(["Significant clusters all conditions against zero, calpha = ", calpha, " alpha = ", alpha], ""));
+
+savefig('all_peak_cluster')
+
+figure()
+ft_clusterplot(cfg, stats_occ);
+sgtitle(strjoin(["Significant clusters visible against occlusion, calpha = ", calpha, " alpha = ", alpha], ""));
+
+savefig('occ_peak_cluster')
 
 % topoplot verwenden um t-werte der channels zu plotten
 % 'mask' um nur überschwellige Werte anzuzeigen
@@ -930,9 +976,6 @@ end
 '[STUDY ALLEEG] = std_precomp(STUDY, ALLEEG, {},'savetrials','on','interp','on','recompute','on','erp','on','erpparams',{'rmbase' [-500 0] },'erpim','on','erpimparams',{'nlines' 10 'smoothing' 10});['' ...
     ''][STUDY EEG] = pop_savestudy( STUDY, EEG, 'filename','study_peaks_epoched.study','filepath','C:\\wilken\\Emulation-Data-Output\\study\\')
 std_erspplot(STUDY, ALLEEG)
-
-
-%% Do TF Decomposition on data
 
 
 %% Surface Laplacians CSD toolbox (aka current source density)
