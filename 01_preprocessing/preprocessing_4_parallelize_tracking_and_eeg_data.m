@@ -749,5 +749,5 @@ for s = 1:size(track_data, 2)
 
 end
 file_name2 = strcat([out_path, track_file_name_suffix]);
-save(strjoin(file_name2), 'track_data');
+save(strjoin(file_name2, '\'), 'track_data');
 
