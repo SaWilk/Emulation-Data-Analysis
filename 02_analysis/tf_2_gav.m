@@ -4,6 +4,7 @@
 % This script contains: 
 % Grand average for task A conditions: const, rand1, rand2
 % Grand average for task B conditions: occl, non-occl
+% save GAVs for A and B
 
 % load TF decomposed data for each subject, and calculate GAV
 
@@ -36,8 +37,6 @@ load subjects;
 % conditions
 conds_A = {'const', 'rand1', 'rand2'};
 conds_B = {'occl', 'nonoccl'};
-
-
 
 %% prepare data struct to calculate GAV for Task A
 
@@ -78,6 +77,9 @@ for cond = 1:size(conds_A,2)
     freq_GAV_A.(cond) = ft_freqgrandaverage(cfg, freq_data_cond{:});
 end
 
+% save GAV in datapath
+outputname = [datapath_A filesep 'freq_GAV_A'];
+save(outputname, 'freq_GAV_A');
 
 %% prepare data struct to calculate GAV for Task B
 
@@ -123,6 +125,9 @@ for cond = 1:size(conds_B,2)
     freq_GAV_B.(cond) = ft_freqgrandaverage(cfg, freq_data_cond{:});
 end
 
+% save GAV in datapath
+outputname = [datapath_B filesep 'freq_GAV_B'];
+save(outputname, 'freq_GAV_B');
 
 %% plotting stuff task A
 
@@ -132,12 +137,12 @@ cfg = [];
 cfg.layout = lay;
 layout = ft_prepare_layout(cfg);
 
-cfg.ylim = [13 30];
-cfg.xlim = [0 3]
+cfg.ylim = [2 10];
+cfg.xlim = [0 3];
 cfg.zlim = 'maxmin';
 cfg.layout = layout;
 cfg.title = 'Task A: avg const';
-%ft_multiplotTFR(cfg, freq_GAV_A.const);
+ft_multiplotTFR(cfg, freq_GAV_A.const);
 ft_topoplotTFR(cfg, freq_GAV_A.const);
 
 % multiplot random 1
