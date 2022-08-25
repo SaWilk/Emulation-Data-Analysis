@@ -37,8 +37,6 @@ load subjects;
 conds_A = {'const', 'rand1', 'rand2'};
 conds_B = {'occl', 'nonoccl'};
 
-
-
 %% prepare data struct to calculate GAV for Task A
 
 % change directory to load data
@@ -132,12 +130,12 @@ cfg = [];
 cfg.layout = lay;
 layout = ft_prepare_layout(cfg);
 
-cfg.ylim = [13 30];
-cfg.xlim = [0 3]
+cfg.ylim = [2 10];
+cfg.xlim = [0 3];
 cfg.zlim = 'maxmin';
 cfg.layout = layout;
 cfg.title = 'Task A: avg const';
-%ft_multiplotTFR(cfg, freq_GAV_A.const);
+ft_multiplotTFR(cfg, freq_GAV_A.const);
 ft_topoplotTFR(cfg, freq_GAV_A.const);
 
 % multiplot random 1

@@ -63,8 +63,8 @@ load([inputpath_B filesep 'freq_all_sbj_B']);
 
 % occlusion vs non-occlusion
 % for time intervals, averaged over time
-calpha  = 0.001;
-alpha   = 0.001;
+calpha  = 0.05;
+alpha   = 0.05;
 
 cfg                     = [];
 cfg.design              = design;
@@ -72,9 +72,9 @@ cfg.uvar                = 1; % row of design matrix containing unit variables, i
 cfg.ivar                = 2; % row of design matrix containing conditions
 cfg.channel             = {'all'};
 cfg.frequency           = [4 7];
-cfg.avgoverfreq         = ['no'];
-cfg.avgovertime         = 'no';
-cfg.latency             = [0 2]; % begin end in s
+cfg.avgoverfreq         = 'no';
+cfg.avgovertime         = 'yes';
+cfg.latency             = [1.5 2]; % begin end in s
 cfg.method              = 'montecarlo';
 cfg.statistic           = 'depsamplesT';
 cfg.correctm            = 'cluster';
@@ -90,7 +90,7 @@ cfg.numrandomization    = 1000;
 
 %% perform CBPT
 
-stats = ft_freqstatistics(cfg, freq_all_B.(conds_B{1}){:}, freq_all_B.(conds_B{2}){:});
+stats = ft_freqstatistics(cfg, freq_all_B.(conds_B{1}){:}, freq_all_B.(conds_B{1}){:});
 
 
 % The field prob contains the proportion of draws from the permutation 
@@ -122,22 +122,3 @@ colorbar()
 % topoplot verwenden um t-werte der channels zu plotten 
 % 'mask' um nur überschwellige Werte anzuzeigen
 % Bedingungsvergleiche testen
-
-%% explore the results a little bit further
-% 
-% avg_diff_B = freq_all_B;
-% avg_diff.powspctrm = avg_constant.powspctrm - avg_rand1.powspctrm;
-% 
-
-
-%% paul plot code
-% cfg.style                   = 'blank';
-cfg.alpha                   = alpha;
-cfg.parameter               = 'stat';
-cfg.highlightcolorpos       = [0 0 0];
-cfg.highlightcolorneg       = [1 0 0];
-cfg.highlightsymbolseries   = ['x', 'x', 'x', 'x', 'x'];
-cfg.highlightsizeseries     = [8,8,8,8,8];
-cfg.subplotsize             = [1 1];
-
-ft_clusterplot(cfg, stats);
