@@ -4,6 +4,7 @@
 % This script contains: 
 % Grand average for task A conditions: const, rand1, rand2
 % Grand average for task B conditions: occl, non-occl
+% save GAVs for A and B
 
 % load TF decomposed data for each subject, and calculate GAV
 
@@ -76,6 +77,9 @@ for cond = 1:size(conds_A,2)
     freq_GAV_A.(cond) = ft_freqgrandaverage(cfg, freq_data_cond{:});
 end
 
+% save GAV in datapath
+outputname = [datapath_A filesep 'freq_GAV_A'];
+save(outputname, 'freq_GAV_A');
 
 %% prepare data struct to calculate GAV for Task B
 
@@ -121,6 +125,9 @@ for cond = 1:size(conds_B,2)
     freq_GAV_B.(cond) = ft_freqgrandaverage(cfg, freq_data_cond{:});
 end
 
+% save GAV in datapath
+outputname = [datapath_B filesep 'freq_GAV_B'];
+save(outputname, 'freq_GAV_B');
 
 %% plotting stuff task A
 
