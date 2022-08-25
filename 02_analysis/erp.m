@@ -257,15 +257,6 @@ figure()
 [~, min_ind] = plot_ERP(z_epoch_mean_all, mean_struct.time_vec, base_dur, title_string_z, subtitle_string);
 savefig('all_condition_peaks_erp_z')
 
-% Single Channel ERP
-% Plots the electrode that shows the biggest amplitude in the ERP
-
-min_chan_idx = min_ind(1);
-chan_lab = EEG.chanlocs(min_chan_idx).labels;
-subtitle_string = strcat(['channel ', chan_lab]);
-figure()
-plot_ERP(epoch_mean_all(min_chan_idx, :), mean_struct.time_vec, base_dur, title_string, subtitle_string)
-% TODO: Instead plot the electrode with the largest t-value in the CBP test
 
 % Average ERP Plots occluded vs non-occluded
 
@@ -385,12 +376,17 @@ epoch_mean_rand1 = mean(mean_struct.rand1,3);
 epoch_mean_const = mean(mean_struct.const,3);
 epoch_mean_rand2 = mean(mean_struct.rand2,3);
 
+% specify parameters for topoplotting
 base_dur = 500;
-num_topos = 15;
-latencies_onset = linspace(0, 700, num_topos);
-latencies_offset = latencies_onset + 50;
+num_topos = 20;
+topo_rows = 5;
+topo_cols = 4;
+topo_dur = 30;
+epoch_end = 600 - topo_dur;
+latencies_onset = linspace(0, epoch_end, num_topos);
+latencies_offset = latencies_onset + topo_dur;
 
-% extract means across 50 ms periods for topoplot
+% extract means across topo_dur ms periods for topoplot
 for i = 1:length(latencies_onset)
 
     [~, lat_idx_onset] = min(abs(mean_struct.time_vec - latencies_onset(i)));
@@ -416,23 +412,49 @@ cd(peak_erp_plots_dir)
 
 % doc topoplot: https://rdrr.io/cran/erpR/man/topoplot.html
 
-% all conditions
+%% all conditions
+
+
 figure()
 zlims = [min(topo_struct.all, [], 'all'), max(topo_struct.all, [], 'all')]';
 for i = 1:length(latencies_onset)
 
-    subplot(num_topos/5, num_topos/3, i)
+    subplot(topo_rows, topo_cols, i)
     topoplot(topo_struct.all(:, i), chan_locs, 'maplimits',  zlims)
     title(strcat(['average of ', num2str(latencies_onset(i)), ' to ', ...
         num2str(latencies_offset(i)), ' ms']))
     colorbar()
 end
-sgtitle('epochs around peaks all subjects all trials')
+sgtitle(strcat(['epochs around peaks all subjects all trials,']))
 
 savefig('all_condition_peaks_topo')
 
+% prepare single-channel plotting
 
-% occlusion vs non-occlusion
+interesting_window = max(find(latencies_onset < 200 ));
+[~, min_chan_idx] = min(topo_struct.all(:, interesting_window));
+chan_lab = ALLEEG(1).chanlocs(min_chan_idx).labels;
+
+% Single Channel ERP Plot + Topo
+% Plots the electrode that shows the biggest amplitude in the ERP
+
+figure()
+subplot(1, 2, 1)
+title_string = strcat(['electrode ', chan_lab, ', all subjects, all conditions around peaks.'])
+subtitle_string = strcat(['channel ', chan_lab]);
+plot_ERP(epoch_mean_all(min_chan_idx, :), mean_struct.time_vec, base_dur, title_string, subtitle_string)
+subplot(1, 2, 2)
+topoplot(topo_struct.all(:, interesting_window), chan_locs, 'maplimits',  zlims, 'emarker2', {min_chan_idx,'s','m'})
+    title(strcat(['average of ', num2str(latencies_onset(interesting_window)), ' to ', ...
+        num2str(latencies_offset(interesting_window)), ' ms']))
+sgtitle(strcat(['epochs around peaks all subjects all trials, elec ', chan_lab, ' is highlighted (min amp at 200ms win)']))
+
+savefig('all_condition_peaks_topo_single')
+
+
+
+%% occlusion vs non-occlusion
+
 figure();
 zlims = [min([topo_struct.occ,topo_struct.vis] , [], 'all'), max([topo_struct.occ,topo_struct.vis], [], 'all')]';
 rows = 5;
@@ -461,6 +483,37 @@ end
 sgtitle("peak epoch ERPs: occlusion (left) vs non-occlusion (right)");
 savefig('occclusion_vs_visible_peaks_topo');
 
+% prepare single-channel plotting
+
+interesting_window = max(find(latencies_onset < 200 ));
+[~, min_chan_idx_occ] = min(topo_struct.occ(:, interesting_window));
+[~, min_chan_idx_vis] = min(topo_struct.vis(:, interesting_window));
+chan_lab_occ = ALLEEG(1).chanlocs(min_chan_idx_occ).labels;
+chan_lab_vis = ALLEEG(1).chanlocs(min_chan_idx_vis).labels;
+
+% Single Channel ERP Plot + Topo
+% Plots the electrode that shows the biggest amplitude in the ERP
+
+figure()
+subplot(2, 2, 1)
+plot(mean_struct.time_vec, epoch_mean_occ(min_chan_idx_occ, :))
+hold on
+plot(mean_struct.time_vec, epoch_mean_vis(min_chan_idx_vis, :))
+hold off
+legend({'occluded', 'visible'})
+title(strcat(['electrode ', chan_lab, ', all subjects, occlusion vs visible around peaks.']))
+subtitle(strcat(['channel ', chan_lab]));
+subplot(2, 2, 2)
+topoplot(topo_struct.occ(:, interesting_window), chan_locs, 'maplimits',  zlims, 'emarker2', {min_chan_idx_occ,'s','m'})
+title(strcat(['occluded, average of ', num2str(latencies_onset(interesting_window)), ' to ', ...
+    num2str(latencies_offset(interesting_window)), ' ms']))
+subplot(2, 2, 4)
+topoplot(topo_struct.vis(:, interesting_window), chan_locs, 'maplimits',  zlims, 'emarker2', {min_chan_idx_vis,'s','m'})
+title(strcat(['visible, average of ', num2str(latencies_onset(interesting_window)), ' to ', ...
+    num2str(latencies_offset(interesting_window)), ' ms']))
+sgtitle(strcat(['epochs around peaks all subjects occ vs visible, elec ', chan_lab, ' is highlighted (min amp at 200ms win)']))
+
+savefig('occ_vs_visible_peaks_topo_single')
 
 % constant vs random
 figure();
@@ -500,6 +553,46 @@ end
 sgtitle("peak epochs: constant (left) vs random1 (middle) vs random2 (right)");
 savefig('constant_vs_random_peaks_topo');
 
+
+% prepare single-channel plotting
+
+interesting_window = max(find(latencies_onset < 200 ));
+[~, min_chan_idx_const] = min(topo_struct.const(:, interesting_window));
+[~, min_chan_idx_rand1] = min(topo_struct.rand1(:, interesting_window));
+[~, min_chan_idx_rand2] = min(topo_struct.rand2(:, interesting_window));
+chan_lab_const = ALLEEG(1).chanlocs(min_chan_idx_const).labels;
+chan_lab_rand1 = ALLEEG(1).chanlocs(min_chan_idx_rand1).labels;
+chan_lab_rand2 = ALLEEG(1).chanlocs(min_chan_idx_rand2).labels;
+
+
+% Single Channel ERP Plot + Topo
+% Plots the electrode that shows the biggest amplitude in the ERP
+
+figure()
+subplot(2, 2, 1)
+plot(mean_struct.time_vec, epoch_mean_const(min_chan_idx_const, :))
+hold on
+plot(mean_struct.time_vec, epoch_mean_rand1(min_chan_idx_rand1, :))
+plot(mean_struct.time_vec, epoch_mean_rand2(min_chan_idx_rand2, :))
+hold off
+legend({'constant', 'random1', 'random2'})
+title(strcat(['electrode ', chan_lab, ', all subjects, occlusion vs visible around peaks.']))
+subtitle(strcat(['channel ', chan_lab]));
+subplot(2, 2, 2)
+topoplot(topo_struct.const(:, interesting_window), chan_locs, 'maplimits',  zlims, 'emarker2', {min_chan_idx_occ,'s','m'})
+title(strcat(['constant, average of ', num2str(latencies_onset(interesting_window)), ' to ', ...
+    num2str(latencies_offset(interesting_window)), ' ms']))
+subplot(2, 2, 3)
+topoplot(topo_struct.rand1(:, interesting_window), chan_locs, 'maplimits',  zlims, 'emarker2', {min_chan_idx_vis,'s','m'})
+title(strcat(['random1, average of ', num2str(latencies_onset(interesting_window)), ' to ', ...
+    num2str(latencies_offset(interesting_window)), ' ms']))
+subplot(2, 2, 4)
+topoplot(topo_struct.rand2(:, interesting_window), chan_locs, 'maplimits',  zlims, 'emarker2', {min_chan_idx_vis,'s','m'})
+title(strcat(['random2, average of ', num2str(latencies_onset(interesting_window)), ' to ', ...
+    num2str(latencies_offset(interesting_window)), ' ms']))
+sgtitle(strcat(['epochs around peaks all subjects const vs random, elec ', chan_lab, ' is highlighted (min amp at 200ms win)']))
+
+savefig('const_vs_rand_peaks_topo_single')
 
 % difference of occ vs vis
 figure()
@@ -549,12 +642,18 @@ sgtitle('peak epoch ERP differences: constant - random2')
 savefig('diff_const_rand2_peaks_topo')
 
 
+%% Load Tracking Data
+
+load(strjoin(input_dir, 'all_tracking_data.mat', '\'))
+load(strjoin([output_dir_AR_peaks, 'epoch_center_peaks.mat'], '\')) % load 
+% % info about which peaks were at center of which epoch for adding the error to each epoch.
+
 
 %% Load Study
 
 [ STUDY ALLEEG ] = pop_loadstudy('filename', 'study_peaks_epoched.study', 'filepath', study_dir)
 
-
+pop_epoch()
 %% Perform cluster-Based Permutation Test TODO Attempt with EEGLAB
 
 % https://www.fieldtriptoolbox.org/tutorial/cluster_permutation_timelock/
@@ -649,7 +748,6 @@ ft_defaults;
 
 
 %% Prepare Cluster Based Permutaiton Testing
-
 
 
 cd(mean_matrices_peaks_epoched_path)
