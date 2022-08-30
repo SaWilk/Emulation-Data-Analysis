@@ -56,6 +56,9 @@ all_freq     = [2 20];
 timelim_A = [0 3];
 timelim_B = [0 2];
 
+calpha  = 0.001;
+alpha   = 0.001;
+
 %% calculate differences for plotting contrasts
 
 freq_GAV_A.diff_const_rand1 = freq_GAV_A.const;
@@ -68,7 +71,7 @@ freq_GAV_A.diff_rand1_rand2 = freq_GAV_A.rand1;
 freq_GAV_A.diff_rand1_rand2.powspctrm = freq_GAV_A.rand1.powspctrm - freq_GAV_A.rand2.powspctrm;
 
 freq_GAV_B.diff_occl_nonoccl = freq_GAV_B.nonoccl;
-freq_GAV_B.diff_occl_nonoccl = freq_GAV_B.occl.powspctrm - freq_GAV_B.nonoccl.powspctrm;
+freq_GAV_B.diff_occl_nonoccl.powspctrm = freq_GAV_B.occl.powspctrm - freq_GAV_B.nonoccl.powspctrm;
 
 %% plotting tf results task A
 
@@ -84,7 +87,11 @@ cfg.zlim = 'maxmin';
 cfg.layout = layout;
 cfg.title = 'Task A: avg const';
 ft_multiplotTFR(cfg, freq_GAV_A.const);
+colorbar;
+
+cfg.ylim = theta_lims;
 ft_topoplotTFR(cfg, freq_GAV_A.const);
+colorbar;
 
 % multiplot random 1
 
@@ -94,7 +101,15 @@ cfg.zlim = 'maxmin';
 cfg.layout = layout;
 cfg.title = 'Task A: avg rand1';
 ft_multiplotTFR(cfg, freq_GAV_A.rand1);
+colorbar;
+
+cfg.ylim = theta_lims;
 ft_topoplotTFR(cfg, freq_GAV_A.rand1);
+colorbar;
+
+cfg.ylim = alpha_lims;
+ft_topoplotTFR(cfg, freq_GAV_A.rand1);
+colorbar;
 
 % multiplot random 2
 
@@ -104,15 +119,30 @@ cfg.zlim = 'maxmin';
 cfg.layout = layout;
 cfg.title = 'Task A: avg rand2';
 ft_multiplotTFR(cfg, freq_GAV_A.rand2);
+colorbar;
 
-% multiplotcfg.ylim = all_freq;
+% const - rand1
 cfg.xlim = timelim_A;
-cfg.ylim = theta_lims;
+cfg.ylim = all_freq;
 cfg.zlim = 'maxmin';
 cfg.layout = layout;
-cfg.title = 'Task A: difference betweeen avg const and avg rand1';
+cfg.title = 'Task A: avg power const - avg power rand1';
 ft_multiplotTFR(cfg, freq_GAV_A.diff_const_rand1); 
+colorbar;
+
 ft_topoplotTFR(cfg, freq_GAV_A.diff_const_rand1);
+colorbar;
+
+% const - rand2
+cfg.xlim = timelim_A;
+cfg.ylim = all_freq;
+cfg.zlim = 'maxmin';
+cfg.layout = layout;
+cfg.title = 'Task A: avg power const - avg power rand2';
+ft_multiplotTFR(cfg, freq_GAV_A.diff_const_rand2); 
+colorbar;
+
+ft_topoplotTFR(cfg, freq_GAV_A.diff_const_rand2);
 colorbar;
 
 %% plotting stuff task B
@@ -127,10 +157,19 @@ cfg.ylim = all_freq;
 cfg.xlim = timelim_B;
 cfg.zlim = 'maxmin';
 cfg.layout = layout;
-cfg.title = 'Task B: avg occl';
+cfg.title = 'Task B: avg occlusion';
 ft_multiplotTFR(cfg, freq_GAV_B.occl);
+colorbar;
 
-% multiplot random 1
+cfg.ylim = theta_lims;
+ft_topoplotTFR(cfg, freq_GAV_B.occl);
+colorbar;
+
+cfg.ylim = alpha_lims;
+ft_topoplotTFR(cfg, freq_GAV_B.occl);
+colorbar;
+
+% multiplot non-occl
 
 cfg.ylim = all_freq;
 cfg.xlim = timelim_B;
@@ -138,10 +177,18 @@ cfg.zlim = 'maxmin';
 cfg.layout = layout;
 cfg.title = 'Task B: avg nonoccl';
 ft_multiplotTFR(cfg, freq_GAV_B.nonoccl);
+colorbar;
 
 % constast/difference
-cfg.title = 'Task B: avg occluded - non_occluded';
+
+cfg.xlim = timelim_B;
+cfg.ylim = all_freq;
+cfg.zlim = 'maxmin';
+cfg.layout = layout;
+cfg.title = 'Task B: avg occluded - non occluded';
 ft_multiplotTFR(cfg, freq_GAV_B.diff_occl_nonoccl);
+colorbar;
+
 ft_topoplotTFR(cfg, freq_GAV_B.diff_occl_nonoccl);
 colorbar;
 
@@ -160,7 +207,7 @@ cfg.subplotsize    = [4, 4];
 % cfg.saveaspng = "cluster_GO_19_pre.png";
 
 figure()
-ft_clusterplot(cfg, stats);
+ft_clusterplot(cfg, CBPT.A.theta.const_rand1);
 sgtitle(strjoin(["Significant clusters, calpha = ", calpha, " alpha = ", alpha], ""));
 colorbar()
 
@@ -185,4 +232,4 @@ cfg.highlightsymbolseries   = ['x', 'x', 'x', 'x', 'x'];
 cfg.highlightsizeseries     = [8,8,8,8,8];
 cfg.subplotsize             = [1 1];
 
-ft_clusterplot(cfg, stats);
+ft_clusterplot(cfg, CBPT.B.theta);
