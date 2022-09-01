@@ -9,6 +9,8 @@
 
 % update 31/08/22: include beta, average over freqs but not time
 
+% update 01/09/22: extract sig. time window
+
 % Adriana Böttcher
 % 26.08.22
 
