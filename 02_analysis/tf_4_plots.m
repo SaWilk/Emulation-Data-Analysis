@@ -4,6 +4,8 @@
 % This script contains: 
 % TF and CBPT plots
 
+% updated: changed eletrode labels to match neighbour/layout file (upper)
+
 % Adriana Böttcher
 % 25.08.22
 
@@ -47,6 +49,7 @@ load([inputpath_B filesep 'freq_GAV_B']);
 
 % CBPT results
 load([inputpath_CBPT filesep 'CBPT']);
+load([inputpath_CBPT filesep 'CBPT_avg']);
 
 %% lims
 theta_lims   = [4 7];
@@ -58,6 +61,15 @@ timelim_B = [0 2];
 
 calpha  = 0.001;
 alpha   = 0.001;
+
+%% change electrode labels to match neighbour and layout file
+
+freq_GAV_A.const.label = upper(freq_GAV_A.const.label);
+freq_GAV_A.rand1.label = upper(freq_GAV_A.rand1.label);
+freq_GAV_A.rand2.label = upper(freq_GAV_A.rand2.label);
+
+freq_GAV_B.occl.label = upper(freq_GAV_B.occl.label);
+freq_GAV_B.nonoccl.label = upper(freq_GAV_B.nonoccl.label);
 
 %% calculate differences for plotting contrasts
 
@@ -73,19 +85,20 @@ freq_GAV_A.diff_rand1_rand2.powspctrm = freq_GAV_A.rand1.powspctrm - freq_GAV_A.
 freq_GAV_B.diff_occl_nonoccl = freq_GAV_B.nonoccl;
 freq_GAV_B.diff_occl_nonoccl.powspctrm = freq_GAV_B.occl.powspctrm - freq_GAV_B.nonoccl.powspctrm;
 
+% save freq GAV files
+save([inputpath_A filesep 'freq_GAV_A_new'], "freq_GAV_A");
+save([inputpath_B filesep 'freq_GAV_B_new'], "freq_GAV_B");
+
 %% plotting tf results task A
 
 % multiplot constant
 
-cfg = [];
-cfg.layout = lay;
-layout = ft_prepare_layout(cfg);
-
-cfg.ylim = all_freq;
-cfg.xlim = timelim_A;
-cfg.zlim = 'maxmin';
-cfg.layout = layout;
-cfg.title = 'Task A: avg const';
+cfg         = [];
+cfg.layout  = lay;
+cfg.ylim    = [2 20];
+cfg.xlim    = timelim_A;
+cfg.zlim    = 'maxmin';
+cfg.title   = 'Task A: avg const';
 ft_multiplotTFR(cfg, freq_GAV_A.const);
 colorbar;
 
@@ -98,7 +111,7 @@ colorbar;
 cfg.ylim = all_freq;
 cfg.xlim = timelim_A;
 cfg.zlim = 'maxmin';
-cfg.layout = layout;
+cfg.layout = lay;
 cfg.title = 'Task A: avg rand1';
 ft_multiplotTFR(cfg, freq_GAV_A.rand1);
 colorbar;
@@ -116,7 +129,6 @@ colorbar;
 cfg.ylim = all_freq;
 cfg.xlim = timelim_A;
 cfg.zlim = 'maxmin';
-cfg.layout = layout;
 cfg.title = 'Task A: avg rand2';
 ft_multiplotTFR(cfg, freq_GAV_A.rand2);
 colorbar;
@@ -125,7 +137,6 @@ colorbar;
 cfg.xlim = timelim_A;
 cfg.ylim = all_freq;
 cfg.zlim = 'maxmin';
-cfg.layout = layout;
 cfg.title = 'Task A: avg power const - avg power rand1';
 ft_multiplotTFR(cfg, freq_GAV_A.diff_const_rand1); 
 colorbar;
@@ -137,7 +148,6 @@ colorbar;
 cfg.xlim = timelim_A;
 cfg.ylim = all_freq;
 cfg.zlim = 'maxmin';
-cfg.layout = layout;
 cfg.title = 'Task A: avg power const - avg power rand2';
 ft_multiplotTFR(cfg, freq_GAV_A.diff_const_rand2); 
 colorbar;
@@ -147,16 +157,14 @@ colorbar;
 
 %% plotting stuff task B
 
-% multiplot constant
+% multiplot occluded
 
 cfg = [];
 cfg.layout = lay;
-layout = ft_prepare_layout(cfg);
 
 cfg.ylim = all_freq;
 cfg.xlim = timelim_B;
 cfg.zlim = 'maxmin';
-cfg.layout = layout;
 cfg.title = 'Task B: avg occlusion';
 ft_multiplotTFR(cfg, freq_GAV_B.occl);
 colorbar;
@@ -174,7 +182,6 @@ colorbar;
 cfg.ylim = all_freq;
 cfg.xlim = timelim_B;
 cfg.zlim = 'maxmin';
-cfg.layout = layout;
 cfg.title = 'Task B: avg nonoccl';
 ft_multiplotTFR(cfg, freq_GAV_B.nonoccl);
 colorbar;
@@ -184,7 +191,6 @@ colorbar;
 cfg.xlim = timelim_B;
 cfg.ylim = all_freq;
 cfg.zlim = 'maxmin';
-cfg.layout = layout;
 cfg.title = 'Task B: avg occluded - non occluded';
 ft_multiplotTFR(cfg, freq_GAV_B.diff_occl_nonoccl);
 colorbar;
