@@ -98,7 +98,8 @@ base_lims_peaks = [-500 0];
 for ind = 1:length(file_names)
     
     file_name = files2read{ind};
-    TMPEEG = pop_loadset(file_name);
+    EEG = pop_loadset(file_name);
+    [ALLEEG EEG index] = eeg_store(ALLEEG, EEG);
     set_name = TMPEEG.subject;
     TMPEEG.old_urevent = TMPEEG.urevent;
     TMPEEG.urevent = TMPEEG.event;
@@ -138,8 +139,9 @@ if ~strcmp(TMPEEG_A.subject, 'KMY6K') % skip subject 18 Task B cause it is only 
 end
 
         % epoch for peaks & remove baseline 
-    [TMPEEG_peaks, ~, ~, peak_latencies(ind)] = pop_epoch_lat_output(TMPEEG, { event_peaks }, epoch_lims_peaks,...
+    [TMPEEG_peaks, peak_indices] = pop_epoch(TMPEEG, { event_peaks }, epoch_lims_peaks,...
         'newname', TMPEEG.subject, 'epochinfo', 'yes');
+    TMPEEG_peaks.epoch_center_peaks = peak_indices;
     TMPEEG_peaks = eeg_checkset( TMPEEG_peaks );
     TMPEEG_peaks = pop_rmbase(TMPEEG_peaks, base_lims_peaks);
     event_idx = find(strcmp({TMPEEG_peaks.event.type}, event_peaks));
@@ -171,7 +173,6 @@ end
     TMPEEG_peaks.setname = [set_name '_complete_preprocessing_withAR_peaks'];
     TMPEEG_peaks = pop_saveset(TMPEEG_peaks, 'filename', ...
         TMPEEG_peaks.setname, 'filepath', char(output_dir_AR_peaks));
-    save(strjoin([output_dir_AR_peaks, 'epoch_center_peaks.mat'],'\'), 'peak_latencies')
 
 end
 

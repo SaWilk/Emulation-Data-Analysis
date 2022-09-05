@@ -66,6 +66,9 @@ mkdir(mean_matrices_peaks_epoched_path);
 peak_erp_plots_dir = strjoin([parent_dir, "plots", "erp_plots", "peaks"], filesep);
 mkdir(peak_erp_plots_dir);
 
+epochs_plus_error_dir = strjoin([parent_dir, "02_analysis", "peak_epochs_with_error"], filesep);
+mkdir(epochs_plus_error_dir);
+
 % neighbors dir
 neighbors_dir = strjoin([parent_dir_2, "Emulation-Data-Input", "EEG_files"], filesep);
 
@@ -329,7 +332,7 @@ savefig('constant_vs_random_peaks_erp')
 
 %% Plot Contrasts of ERPS as simple subtractions and save plots
 
-% seems pretty useless. 
+% seems pretty useless.
 
 % Average ERP Plots
 figure()
@@ -412,8 +415,8 @@ cd(peak_erp_plots_dir)
 
 % doc topoplot: https://rdrr.io/cran/erpR/man/topoplot.html
 
-%% all conditions
 
+%% all conditions
 
 figure()
 zlims = [min(topo_struct.all, [], 'all'), max(topo_struct.all, [], 'all')]';
@@ -445,8 +448,8 @@ subtitle_string = strcat(['channel ', chan_lab]);
 plot_ERP(epoch_mean_all(min_chan_idx, :), mean_struct.time_vec, base_dur, title_string, subtitle_string)
 subplot(1, 2, 2)
 topoplot(topo_struct.all(:, interesting_window), chan_locs, 'maplimits',  zlims, 'emarker2', {min_chan_idx,'s','m'})
-    title(strcat(['average of ', num2str(latencies_onset(interesting_window)), ' to ', ...
-        num2str(latencies_offset(interesting_window)), ' ms']))
+title(strcat(['average of ', num2str(latencies_onset(interesting_window)), ' to ', ...
+    num2str(latencies_offset(interesting_window)), ' ms']))
 sgtitle(strcat(['epochs around peaks all subjects all trials, elec ', chan_lab, ' is highlighted (min amp at 200ms win)']))
 
 savefig('all_condition_peaks_topo_single')
@@ -642,11 +645,277 @@ sgtitle('peak epoch ERP differences: constant - random2')
 savefig('diff_const_rand2_peaks_topo')
 
 
-%% Load Tracking Data
+%% Load Data
 
-load(strjoin(input_dir, 'all_tracking_data.mat', '\'))
-load(strjoin([output_dir_AR_peaks, 'epoch_center_peaks.mat'], '\')) % load 
-% % info about which peaks were at center of which epoch for adding the error to each epoch.
+% tracking data
+load(strjoin([input_dir, 'all_tracking_data.mat'], '\'));
+clear ALLEEG EEG
+% load data into eeglab
+
+% long epochs
+cd(output_dir_AR_peaks);
+%list all *.set files in inputpath
+file_names = dir('*.set');
+%concatenate into one cell array
+files2read = {file_names.name};
+eeglab
+for idx = 1:length(files2read)
+
+    EEG = pop_loadset('filename',files2read{idx});
+    [ALLEEG EEG] = eeg_store(ALLEEG, EEG);
+
+end
+eeglab redraw
+
+
+
+%% Calculate Error per Epoch and put in event field
+
+for s = 1:length(ALLEEG)
+    % get plus / minus latencies around peaks
+    epoch_lims = [ALLEEG(s).xmin, ALLEEG(s).xmax];
+    % transform ms time points in samples
+    epoch_lims = epoch_lims * ALLEEG(s).srate;
+    % get the latencies of the peaks around which epoching was done
+    %     count = 0;
+    %     for peak = 1:length(ALLEEG(s).urevent)
+    %         count = strcmp(ALLEEG(s).urevent(peak).type, 'S 40') + count;
+    %     end % ok, so peak latencies contains all the peak event latencies.
+
+    for ep = 1:size(ALLEEG(s).data, 3)
+
+        EEG = ALLEEG(s);
+        % get central peak of epoch
+        peak_idx = EEG.epoch(ep).event([EEG.epoch(ep).eventlatency{:}] == 0);
+        % get task we are in
+        epoch_task = EEG.event(peak_idx).task;
+        % get number of trial we are in
+        epoch_trial = EEG.event(peak_idx).trial_number;
+        % do all this only if we are dealing with a valid trial
+        if epoch_trial ~= 9999
+            % get latency inside trial
+            epoch_trial_latency = EEG.event(peak_idx).trial_latency;
+
+            % calculate error in epoch
+            %  get current error
+            cur_error = abs(track_data(s).upsamp_data.(epoch_task)(epoch_trial).error);
+            epoch_start = epoch_trial_latency+epoch_lims(1);
+            epoch_end = epoch_trial_latency+epoch_lims(2);
+            if epoch_start < 1
+                epoch_start = 1;
+            end
+            if epoch_end > length(cur_error)
+                epoch_end = length(cur_error);
+            end
+            error_of_epoch = cur_error(epoch_start:epoch_end);
+            % work on event field
+            % get event fields that belong to epoch
+            epoch_idx = find([EEG.event.epoch] == ep);
+            % put error in epoch in event field
+            for srow = 1:length(epoch_idx)
+                EEG.event(epoch_idx(srow)).('epoch_error') = mean(error_of_epoch, 'omitnan');
+            end
+        end
+
+    end
+
+    EEG = pop_saveset(EEG, 'filename', EEG.setname, 'filepath', ...
+        char(epochs_plus_error_dir));
+    ALLEEG(s) = EEG;
+end
+
+eeglab redraw
+
+% eeg_retrieve() % Retrieve an EEG dataset from the variable
+%                    containing all datasets (standard: ALLEEG).
+
+
+%% Empty
+
+format compact
+format long G
+clear
+clc
+
+
+%% Folders and Dependencies
+
+% add path and start EEGlab toolbox
+% addpath('R:\AG-Beste-Orga\Skripts\Toolbox\eeglab2021.0');
+eeglab;
+close;
+
+% file location
+file_path = matlab.desktop.editor.getActiveFilename;
+file_path = fileparts(file_path);
+addpath(file_path);
+
+% get data paths for parent dirs
+filepath_parts = strsplit(file_path, filesep);
+parent_dir = filepath_parts(1:end-1);
+parent_dir = strjoin(parent_dir, filesep);
+parent_dir_2 = filepath_parts(1:end-2);
+parent_dir_2 = strjoin(parent_dir_2, filesep);
+
+% add functions in parent dir
+addpath([char(parent_dir) filesep 'functions']);
+
+% set input & output directory
+input_dir = strjoin([parent_dir_2, "Emulation-Data-Output\03_parallelize_with_traj"], filesep);
+output_dir = strjoin([parent_dir_2, "Emulation-Data-Output"], filesep);
+output_dir_epoched = strjoin([parent_dir_2, "Emulation-Data-Output\04_epoched"], filesep);
+output_dir_baseline = strjoin([parent_dir_2, "Emulation-Data-Output\05_baseline"], filesep);
+output_dir_AR = strjoin([parent_dir_2, "Emulation-Data-Output\06_artifact_rejection"], filesep);
+
+subdir_const_rand = strjoin([output_dir_epoched, "const_rand"], filesep);
+subdir_occl = strjoin([output_dir_epoched filesep "occl_nonoccl"], filesep);
+% out dirs for peaks for multiple epoch lengths
+subdir_peaks = strjoin([output_dir_epoched filesep 'peaks_-500_750'], filesep);
+
+study_dir = strjoin([output_dir, "study"], filesep);
+
+savepath_baseline_const_rand = strjoin([output_dir_baseline, "const_rand"], filesep);
+savepath_baseline_occl = strjoin([output_dir_baseline, 'occl_nonoccl'], filesep);
+% out dirs for peaks for multiple epoch lengths
+savepath_baseline_peaks = strjoin([output_dir_baseline, 'peaks_-500_750'], filesep);
+
+output_dir_AR_const = strjoin([output_dir_AR, 'const'], filesep);
+output_dir_AR_occl = strjoin([output_dir_AR, 'occl'], filesep);
+% out dirs for peaks for multiple epoch lengths
+output_dir_AR_peaks = strjoin([output_dir_AR, 'peaks_-500_750'], filesep);
+
+mean_matrices_path = strjoin([output_dir, 'mean_matrices'], filesep);
+mkdir(mean_matrices_path);
+mean_matrices_peaks_epoched_path = strjoin([mean_matrices_path, 'peaks'], filesep);
+mkdir(mean_matrices_peaks_epoched_path);
+
+peak_erp_plots_dir = strjoin([parent_dir, "plots", "erp_plots", "peaks"], filesep);
+mkdir(peak_erp_plots_dir);
+
+epochs_plus_error_dir = strjoin([parent_dir, "02_analysis", "peak_epochs_with_error"], filesep);
+mkdir(epochs_plus_error_dir);
+
+% neighbors dir
+neighbors_dir = strjoin([parent_dir_2, "Emulation-Data-Input", "EEG_files"], filesep);
+
+%%
+% long epochs
+cd(epochs_plus_error_dir);
+%list all *.set files in inputpath
+file_names = dir('*.set');
+%concatenate into one cell array
+files2read = {file_names.name};
+
+for idx = 1:length(files2read)
+
+    EEG = pop_loadset('filename',files2read{idx});
+    [ALLEEG EEG] = eeg_store(ALLEEG, EEG);
+
+end
+
+% ERP image with large numbers of trials. When plotting a large number of
+% trials, it is not necessary to plot each (smoothed) trial as a horizontal
+% line. (The screen and/or printer resolution may be insufficient to
+% display them all). To reduce the imaging delay (and to decrease the saved
+% plot file size), one can decimate some of the (smoothed) ERP-image lines.
+% Entering 4 in the Downsampling box of the pop_erpimage.m window would
+% decimate (reduce) the number of lines in the ERP image by a factor of 4.
+% If the Smoothing width is (in this case) greater than 2*4 = 8, no
+% information will be lost from the smoothed image. To image our sample
+% dataset, it is not necessary to decimate since we have relatively few
+% (80) trials.
+clear tmp_data
+chan_no = 12;
+chan_lab = 'AF3';
+
+TMPEEGALL = EEG;
+
+tmp_data = squeeze(ALLEEG(s).data(chan_no, :, :));
+tmp_data(:, end+1:end+size(ALLEEG(s+1).data(chan_no, :, :),3)) = squeeze(ALLEEG(s+1).data(chan_no, :, :));
+
+TMPEEGALL.data(:, )
+
+% AF3 = 12
+erpimage( mean(EEG.data([12], :),1), ones(1, EEG.trials)*EEG.xmax*1000, ...
+    linspace(EEG.xmin*1000, EEG.xmax*1000, EEG.pnts), 'AF3', 10, 1 , ...
+    'yerplabel','\muV','erp','on','cbar','on','topo', { [12] EEG.chanlocs EEG.chaninfo } );
+
+
+% sort by error size
+
+ALLCOM{1}
+figure;
+pop_erpimage(EEG,1, [12],[[]],'AF3',10,5,{'S 40'},[],'epoch_error' ,'yerplabel','\muV','erp','on','cbar','on','align',Inf,'topo', { [12] EEG.chanlocs EEG.chaninfo } );
+
+[STUDY, ALLEEG] = std_precomp(STUDY, ALLEEG, {},'savetrials','on',...
+    'interp','on','recompute','on','erpim','on','erpimparams',{'nlines',1250,'smoothing',10});
+
+max([size(ALLEEG(:).data,3)])
+
+image_struct = std_erpimage(ALLEEG, 'channels', {'AF3'}, 'concatenate', 'on', ...
+    'smoothing', 10, 'nlines', 1250, 'sorttype', 'S 40',...
+    'sortfield', 'epoch_error', 'recompute', 'on')
+
+
+%   Usage:
+%     >> std_erpimage( EEG, 'key', 'val', ...);
+%  
+%   Inputs:
+%     EEG          - a loaded epoched EEG dataset structure. May be an array
+%                    of such structure containing several datasets.
+%  
+%   Optional inputs:
+%     'components' - [numeric vector] components of the EEG structure for which 
+%                    the measure will be computed {default|[] -> all}
+%     'channels'   - [cell array] channels of the EEG structure for which 
+%                    activation ERPs will be computed {default|[] -> none}
+%     'trialindices' - [cell array] indices of trials for each dataset.
+%                    Default is all trials.
+%     'recompute'  - ['on'|'off'] force recomputing data file even if it is 
+%                    already on disk.
+%     'rmcomps'    - [integer array] remove artifactual components (this entry
+%                    is ignored when plotting components). This entry contains 
+%                    the indices of the components to be removed. Default is none.
+%     'interp'     - [struct] channel location structure containing electrode
+%                    to interpolate ((this entry is ignored when plotting 
+%                    components). Default is no interpolation.
+%     'fileout'    - [string] name of the file to save on disk. The default
+%                    is the same name (with a different extension) as the 
+%                    dataset given as input.
+%  
+%   ERPimage options:
+%     'concatenate' - ['on'|'off'] concatenate single trial of different
+%                    subjects for plotting ERPimages ('on'). The default
+%                    ('off') computes an ERPimage for each subject and then
+%                    averages these ERPimages. This allows to perform
+%                    statistics (the 'on' options does not allow statistics).
+%     'smoothing'  - Smoothing parameter (number of trials). {Default: 10}
+%                    erpimage() equivalent: 'avewidth'
+%     'nlines'     - Number of lines for ERPimage. erpimage() equivalent is 
+%                    'decimate'. Note that this parameter must be larger than
+%                    the minimum number of trials in each design cell 
+%                    {Default: 10}
+%     'sorttype'   - Sorting event type(s) ([int vector]; []=all). See Notes below.
+%                    Either a string or an integer.
+%     'sortwin'    - Sorting event window [start, end] in milliseconds ([]=whole epoch)
+%     'sortfield'  - Sorting field name. {default: latency}.
+%     'erpimageopt'  - erpimage() options, separated by commas (Ex: 'erp', 'cbar').
+%                    {Default: none}. For further details see >> erpimage help
+%   Outputs:
+%     erpimagestruct - structure containing ERPimage information that is
+%                      been saved on disk.
+ 
+
+
+%% Surface Laplacians
+
+TMPEEG = pop_currentdensity(EEG, 'method','spline');
+
+
+
+
+
+
 
 
 %% Load Study
@@ -654,6 +923,8 @@ load(strjoin([output_dir_AR_peaks, 'epoch_center_peaks.mat'], '\')) % load
 [ STUDY ALLEEG ] = pop_loadstudy('filename', 'study_peaks_epoched.study', 'filepath', study_dir)
 
 pop_epoch()
+
+
 %% Perform cluster-Based Permutation Test TODO Attempt with EEGLAB
 
 % https://www.fieldtriptoolbox.org/tutorial/cluster_permutation_timelock/
@@ -1066,7 +1337,6 @@ end
 
 %% Create ERP Plot of the data TODO
 
-
 % TODO: sort by error size in epoch
 % sort by
 '[STUDY ALLEEG] = std_editset( STUDY, ALLEEG, 'name','emulation_study_old','updatedat','on','rmclust','off' );
@@ -1079,19 +1349,26 @@ std_erspplot(STUDY, ALLEEG)
 %% Surface Laplacians CSD toolbox (aka current source density)
 
 % keep default settings
-addpath(genpath('C:\wilken\eeglab2019_0\CSDtoolbox'))
+addpath(genpath('C:\wilken\CSDtoolbox'));
 
 % tutorial: https://psychophysiology.cpmc.columbia.edu/Software/CSDtoolbox/tutorial.html
 % common errors: https://psychophysiology.cpmc.columbia.edu/Software/CSDtoolbox/errors.html
 % FAQ: https://psychophysiology.cpmc.columbia.edu/Software/CSDtoolbox/FAQ.html
 
+% exploit the EEG montage information included in any EEGlab data file to 
+% generate the montage-dependent "Channels × Channels" transformation 
+% matrices G and H (EEGlab_Make_G_H.m), and how to use these 
+% transformation matrices with individual EEGlab data files
+
 % Get usable list of electrodes from EEGlab data structure
-for site = 1:60
+for site = 1:length({ALLEEG(1).chanlocs.labels})
     trodes{site}=(ALLEEG(1).chanlocs(site).labels);
-end;
+end
 trodes=trodes';
 
 % Get Montage for use with CSD Toolbox
+% '10-5-System_Mastoids_EGI129.csd' is a data file with electrode locations
+% according to the 10-5 system 
 Montage_64=ExtractMontage('10-5-System_Mastoids_EGI129.csd',trodes);
 MapMontage(Montage_64);
 
