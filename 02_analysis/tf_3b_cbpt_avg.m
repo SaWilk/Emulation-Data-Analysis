@@ -9,6 +9,8 @@
 
 % update 31/08/22: include beta, average over freqs but not time
 
+% update 01/09/22: extract sig. time window
+
 % Adriana Böttcher
 % 26.08.22
 
@@ -135,13 +137,28 @@ CBPT_avg.A.theta = {};
 stats                           = ft_freqstatistics(cfg, freq_all_A.(conds_A{1}){:}, freq_all_A.(conds_A{2}){:});
 CBPT_avg.A.theta.const_rand1    = stats;
 
+[sig_times, first, last]                = CBPT_sig_timewindow(CBPT_avg.A.theta.const_rand1, alpha);
+CBPT_avg.A.theta.const_rand1.sig_times  = sig_times;
+CBPT_avg.A.theta.const_rand1.first_sig  = first;
+CBPT_avg.A.theta.const_rand1.last_sig   = last;
+
 % cond 2 vs. cond3 (const vs. rand2)
 stats                           = ft_freqstatistics(cfg, freq_all_A.(conds_A{2}){:}, freq_all_A.(conds_A{3}){:});
 CBPT_avg.A.theta.const_rand2    = stats;
 
+[sig_times, first, last]                = CBPT_sig_timewindow(CBPT_avg.A.theta.const_rand2, alpha);
+CBPT_avg.A.theta.const_rand2.sig_times  = sig_times;
+CBPT_avg.A.theta.const_rand2.first_sig  = first;
+CBPT_avg.A.theta.const_rand2.last_sig   = last;
+
 % cond 1 vs. cond3 (rand1 vs. rand2)
 stats                           = ft_freqstatistics(cfg, freq_all_A.(conds_A{1}){:}, freq_all_A.(conds_A{3}){:});
 CBPT_avg.A.theta.rand1_rand2    = stats;
+
+[sig_times, first, last]                = CBPT_sig_timewindow(CBPT_avg.A.theta.rand1_rand2, alpha);
+CBPT_avg.A.theta.rand1_rand2.sig_times  = sig_times;
+CBPT_avg.A.theta.rand1_rand2.first_sig  = first;
+CBPT_avg.A.theta.rand1_rand2.last_sig   = last;
 
 %alpha
 CBPT_avg.A.alpha    = {};
@@ -151,13 +168,28 @@ cfg.frequency   = alpha_lims;
 stats                           = ft_freqstatistics(cfg, freq_all_A.(conds_A{1}){:}, freq_all_A.(conds_A{2}){:});
 CBPT_avg.A.alpha.const_rand1    = stats;
 
+[sig_times, first, last]                = CBPT_sig_timewindow(CBPT_avg.A.alpha.const_rand1, alpha);
+CBPT_avg.A.alpha.const_rand1.sig_times  = sig_times;
+CBPT_avg.A.alpha.const_rand1.first_sig  = first;
+CBPT_avg.A.alpha.const_rand1.last_sig   = last;
+
 % cond 2 vs. cond3 (const vs. rand2)
 stats                           = ft_freqstatistics(cfg, freq_all_A.(conds_A{2}){:}, freq_all_A.(conds_A{3}){:});
 CBPT_avg.A.alpha.const_rand2    = stats;
 
+[sig_times, first, last]                = CBPT_sig_timewindow(CBPT_avg.A.alpha.const_rand2, alpha);
+CBPT_avg.A.alpha.const_rand2.sig_times  = sig_times;
+CBPT_avg.A.alpha.const_rand2.first_sig  = first;
+CBPT_avg.A.alpha.const_rand2.last_sig   = last;
+
 % cond 1 vs. cond3 (rand1 vs. rand2)
 stats                           = ft_freqstatistics(cfg, freq_all_A.(conds_A{1}){:}, freq_all_A.(conds_A{3}){:});
 CBPT_avg.A.alpha.rand1_rand2    = stats;
+
+[sig_times, first, last]                = CBPT_sig_timewindow(CBPT_avg.A.alpha.rand1_rand2, alpha);
+CBPT_avg.A.alpha.rand1_rand2.sig_times  = sig_times;
+CBPT_avg.A.alpha.rand1_rand2.first_sig  = first;
+CBPT_avg.A.alpha.rand1_rand2.last_sig   = last;
 
 %beta
 CBPT_avg.A.beta     = {};
@@ -167,13 +199,29 @@ cfg.frequency       = beta_lims;
 stats                           = ft_freqstatistics(cfg, freq_all_A.(conds_A{1}){:}, freq_all_A.(conds_A{2}){:});
 CBPT_avg.A.beta.const_rand1    = stats;
 
+
+[sig_times, first, last]                = CBPT_sig_timewindow(CBPT_avg.A.beta.const_rand1, alpha);
+CBPT_avg.A.beta.const_rand1.sig_times  = sig_times;
+CBPT_avg.A.beta.const_rand1.first_sig  = first;
+CBPT_avg.A.beta.const_rand1.last_sig   = last;
+
 % cond 2 vs. cond3 (const vs. rand2)
 stats                           = ft_freqstatistics(cfg, freq_all_A.(conds_A{2}){:}, freq_all_A.(conds_A{3}){:});
 CBPT_avg.A.beta.const_rand2    = stats;
 
+[sig_times, first, last]                = CBPT_sig_timewindow(CBPT_avg.A.beta.const_rand2, alpha);
+CBPT_avg.A.beta.const_rand2.sig_times  = sig_times;
+CBPT_avg.A.beta.const_rand2.first_sig  = first;
+CBPT_avg.A.beta.const_rand2.last_sig   = last;
+
 % cond 1 vs. cond3 (rand1 vs. rand2)
 stats                           = ft_freqstatistics(cfg, freq_all_A.(conds_A{1}){:}, freq_all_A.(conds_A{3}){:});
 CBPT_avg.A.beta.rand1_rand2    = stats;
+
+[sig_times, first, last]                = CBPT_sig_timewindow(CBPT_avg.A.beta.rand1_rand2, alpha);
+CBPT_avg.A.beta.rand1_rand2.sig_times  = sig_times;
+CBPT_avg.A.beta.rand1_rand2.first_sig  = first;
+CBPT_avg.A.beta.rand1_rand2.last_sig   = last;
 
 %% configuration task B
 
@@ -204,16 +252,33 @@ cfg.numrandomization    = 1000;
 stats               = ft_freqstatistics(cfg, freq_all_B.(conds_B{1}){:}, freq_all_B.(conds_B{2}){:});
 CBPT_avg.B.theta    = stats;
 
+[sig_times, first, last]    = CBPT_sig_timewindow(CBPT_avg.B.theta, alpha);
+CBPT_avg.B.theta.sig_times  = sig_times;
+CBPT_avg.B.theta.first_sig  = first;
+CBPT_avg.B.theta.last_sig   = last;
+
 cfg.frequency       = alpha_lims;
 stats               = ft_freqstatistics(cfg, freq_all_B.(conds_B{1}){:}, freq_all_B.(conds_B{2}){:});
 CBPT_avg.B.alpha    = stats;
+
+[sig_times, first, last]    = CBPT_sig_timewindow(CBPT_avg.B.alpha, alpha);
+CBPT_avg.B.alpha.sig_times  = sig_times;
+CBPT_avg.B.alpha.first_sig  = first;
+CBPT_avg.B.alpha.last_sig   = last;
 
 cfg.frequency       = beta_lims;
 stats               = ft_freqstatistics(cfg, freq_all_B.(conds_B{1}){:}, freq_all_B.(conds_B{2}){:});
 CBPT_avg.B.beta    = stats;
 
+[sig_times, first, last]    = CBPT_sig_timewindow(CBPT_avg.B.beta, alpha);
+CBPT_avg.B.beta.sig_times  = sig_times;
+CBPT_avg.B.beta.first_sig  = first;
+CBPT_avg.B.beta.last_sig   = last;
+
+
 %% save results
-outputname = [outputpath filesep 'CBPT_avg'];
+% new 05/09/22: save in extra file '_with_times'
+outputname = [outputpath filesep 'CBPT_avg_with_times'];
 save(outputname, 'CBPT_avg');
 
 % %% Plot the CBP results Nicos Approach
