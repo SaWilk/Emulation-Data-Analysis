@@ -77,6 +77,19 @@ leadfield               = ft_prepare_leadfield(cfg,[]);
 % load data for each condition and save to data struct --> data.const,
 % data.rand1, data.rand2
 
+% 
+% for cond = 1:size(conds_A,2)
+%     cond = char(conds_A(cond));
+%     
+%     for sbj = 1:size(subjects,2)
+%         sbj = char(subjects(sbj));
+%         filename = [char(sbj) '_' char(cond)];
+%         data = load(filename);
+%         
+%         % get to data struct
+%         data = data.(cond);
+%         
+
 
 
 % code paul:
@@ -97,6 +110,25 @@ leadfield               = ft_prepare_leadfield(cfg,[]);
 
 %%
 % create common spatial filter
+
+% pauls code:
+
+% 
+% cfg                     = [];
+% cfg.method              = 'dics';
+% cfg.frequency           = [4 7];                                % theta frequency band
+% cfg.grid                = leadfield;
+% cfg.vol                 = headmodel;
+% cfg.elec                = sens;
+% cfg.senstype            = 'EEG';
+% cfg.dics.keepfilter     = 'yes';                                % important, if you want to apply a common spatial filter to conditions
+% cfg.dics.realfilter     = 'yes';                                   
+% cfg.dics.projectnoise   = 'yes';                                % important, can be used to calculate Neural Activity Index (NAI)
+% cfg.dics.lambda         = '5%';
+% cfg.dics.reducerank     = 3;
+% cfg.channel             = {'all'};
+%          
+% source_all              = ft_sourceanalysis(cfg, freq_all);
 
 %% 
 % apply common spatial filter for separate conditions
