@@ -36,25 +36,15 @@ addpath([char(parent_dir) filesep 'functions']);
 
 % set input & output directory
 input_dir = strjoin([parent_dir_2, "Emulation-Data-Output\03_parallelize_with_traj"], filesep);
-output_dir = strjoin([parent_dir_2, "Emulation-Data-Output"], filesep);
-output_dir_epoched = strjoin([parent_dir_2, "Emulation-Data-Output\04_epoched"], filesep);
-output_dir_baseline = strjoin([parent_dir_2, "Emulation-Data-Output\05_baseline"], filesep);
-output_dir_AR = strjoin([parent_dir_2, "Emulation-Data-Output\06_artifact_rejection"], filesep);
+epochs_plus_error_dir = strjoin([output_dir, "07_epochs_with_extra_fields"], filesep);
 
-subdir_const_rand = strjoin([output_dir_epoched, "const_rand"], filesep);
-subdir_occl = strjoin([output_dir_epoched filesep "occl_nonoccl"], filesep);
+output_dir = strjoin([parent_dir_2, "Emulation-Data-Output"], filesep);
+
 % out dirs for peaks for multiple epoch lengths
 subdir_peaks = strjoin([output_dir_epoched filesep 'peaks_-500_750'], filesep);
 
 study_dir = strjoin([output_dir, "study"], filesep);
 
-savepath_baseline_const_rand = strjoin([output_dir_baseline, "const_rand"], filesep);
-savepath_baseline_occl = strjoin([output_dir_baseline, 'occl_nonoccl'], filesep);
-% out dirs for peaks for multiple epoch lengths
-savepath_baseline_peaks = strjoin([output_dir_baseline, 'peaks_-500_750'], filesep);
-
-output_dir_AR_const = strjoin([output_dir_AR, 'const'], filesep);
-output_dir_AR_occl = strjoin([output_dir_AR, 'occl'], filesep);
 % out dirs for peaks for multiple epoch lengths
 output_dir_AR_peaks = strjoin([output_dir_AR, 'peaks_-500_750'], filesep);
 
@@ -66,9 +56,6 @@ mkdir(mean_matrices_peaks_epoched_path);
 peak_erp_plots_dir = strjoin([parent_dir, "plots", "erp_plots", "peaks"], filesep);
 mkdir(peak_erp_plots_dir);
 
-epochs_plus_error_dir = strjoin([parent_dir, "02_analysis", "peak_epochs_with_error"], filesep);
-mkdir(epochs_plus_error_dir);
-
 % neighbors dir
 neighbors_dir = strjoin([parent_dir_2, "Emulation-Data-Input", "EEG_files"], filesep);
 
@@ -78,7 +65,7 @@ neighbors_dir = strjoin([parent_dir_2, "Emulation-Data-Input", "EEG_files"], fil
 eeglab;
 
 % long epochs
-cd(output_dir_AR_peaks);
+cd(epochs_plus_error_dir);
 %list all *.set files in inputpath
 file_names = dir('*.set');
 %concatenate into one cell array
@@ -645,99 +632,6 @@ sgtitle('peak epoch ERP differences: constant - random2')
 savefig('diff_const_rand2_peaks_topo')
 
 
-%% Load Data
-
-% tracking data
-load(strjoin([input_dir, 'all_tracking_data.mat'], '\'));
-clear ALLEEG EEG
-% load data into eeglab
-
-% long epochs
-cd(output_dir_AR_peaks);
-%list all *.set files in inputpath
-file_names = dir('*.set');
-%concatenate into one cell array
-files2read = {file_names.name};
-eeglab
-for idx = 1:length(files2read)
-
-    EEG = pop_loadset('filename',files2read{idx});
-    [ALLEEG EEG] = eeg_store(ALLEEG, EEG);
-
-end
-eeglab redraw
-
-
-
-%% Calculate Error per Epoch and put in event field
-
-for s = 1:length(ALLEEG)
-    % get plus / minus latencies around peaks
-    epoch_lims = [ALLEEG(s).xmin, ALLEEG(s).xmax];
-    % transform ms time points in samples
-    epoch_lims = epoch_lims * ALLEEG(s).srate;
-    % get the latencies of the peaks around which epoching was done
-    %     count = 0;
-    %     for peak = 1:length(ALLEEG(s).urevent)
-    %         count = strcmp(ALLEEG(s).urevent(peak).type, 'S 40') + count;
-    %     end % ok, so peak latencies contains all the peak event latencies.
-
-    for ep = 1:size(ALLEEG(s).data, 3)
-
-        EEG = ALLEEG(s);
-        % get central peak of epoch
-        peak_idx = EEG.epoch(ep).event([EEG.epoch(ep).eventlatency{:}] == 0);
-        % get task we are in
-        epoch_task = EEG.event(peak_idx).task;
-        % get number of trial we are in
-        epoch_trial = EEG.event(peak_idx).trial_number;
-        % do all this only if we are dealing with a valid trial
-        if epoch_trial ~= 9999
-            % get latency inside trial
-            epoch_trial_latency = EEG.event(peak_idx).trial_latency;
-
-            % calculate error in epoch
-            %  get current error
-            cur_error = abs(track_data(s).upsamp_data.(epoch_task)(epoch_trial).error);
-            epoch_start = epoch_trial_latency+epoch_lims(1);
-            epoch_end = epoch_trial_latency+epoch_lims(2);
-            if epoch_start < 1
-                epoch_start = 1;
-            end
-            if epoch_end > length(cur_error)
-                epoch_end = length(cur_error);
-            end
-            error_of_epoch = cur_error(epoch_start:epoch_end);
-            % work on event field
-            % get event fields that belong to epoch
-            epoch_idx = find([EEG.event.epoch] == ep);
-            % put error in epoch in event field
-            for srow = 1:length(epoch_idx)
-                EEG.event(epoch_idx(srow)).('epoch_error') = mean(error_of_epoch, 'omitnan');
-            end
-        end
-
-    end
-
-    EEG = pop_saveset(EEG, 'filename', EEG.setname, 'filepath', ...
-        char(epochs_plus_error_dir));
-    ALLEEG(s) = EEG;
-end
-
-eeglab redraw
-
-% eeg_retrieve() % Retrieve an EEG dataset from the variable
-%                    containing all datasets (standard: ALLEEG).
-
-
-%% Empty
-
-format compact
-format long G
-clear
-clc
-
-
 %% Folders and Dependencies
 
 % add path and start EEGlab toolbox
@@ -763,24 +657,15 @@ addpath([char(parent_dir) filesep 'functions']);
 % set input & output directory
 input_dir = strjoin([parent_dir_2, "Emulation-Data-Output\03_parallelize_with_traj"], filesep);
 output_dir = strjoin([parent_dir_2, "Emulation-Data-Output"], filesep);
-output_dir_epoched = strjoin([parent_dir_2, "Emulation-Data-Output\04_epoched"], filesep);
-output_dir_baseline = strjoin([parent_dir_2, "Emulation-Data-Output\05_baseline"], filesep);
-output_dir_AR = strjoin([parent_dir_2, "Emulation-Data-Output\06_artifact_rejection"], filesep);
 
-subdir_const_rand = strjoin([output_dir_epoched, "const_rand"], filesep);
-subdir_occl = strjoin([output_dir_epoched filesep "occl_nonoccl"], filesep);
 % out dirs for peaks for multiple epoch lengths
 subdir_peaks = strjoin([output_dir_epoched filesep 'peaks_-500_750'], filesep);
 
 study_dir = strjoin([output_dir, "study"], filesep);
 
-savepath_baseline_const_rand = strjoin([output_dir_baseline, "const_rand"], filesep);
-savepath_baseline_occl = strjoin([output_dir_baseline, 'occl_nonoccl'], filesep);
+epochs_plus_error_dir = strjoin([output_dir, "07_epochs_with_extra_fields"], filesep);
 % out dirs for peaks for multiple epoch lengths
-savepath_baseline_peaks = strjoin([output_dir_baseline, 'peaks_-500_750'], filesep);
 
-output_dir_AR_const = strjoin([output_dir_AR, 'const'], filesep);
-output_dir_AR_occl = strjoin([output_dir_AR, 'occl'], filesep);
 % out dirs for peaks for multiple epoch lengths
 output_dir_AR_peaks = strjoin([output_dir_AR, 'peaks_-500_750'], filesep);
 
@@ -798,8 +683,9 @@ mkdir(epochs_plus_error_dir);
 % neighbors dir
 neighbors_dir = strjoin([parent_dir_2, "Emulation-Data-Input", "EEG_files"], filesep);
 
-%%
-% long epochs
+
+%% Load data for ERP Image
+
 cd(epochs_plus_error_dir);
 %list all *.set files in inputpath
 file_names = dir('*.set');
@@ -905,18 +791,6 @@ image_struct = std_erpimage(ALLEEG, 'channels', {'AF3'}, 'concatenate', 'on', ..
 %     erpimagestruct - structure containing ERPimage information that is
 %                      been saved on disk.
  
-
-
-%% Surface Laplacians
-
-TMPEEG = pop_currentdensity(EEG, 'method','spline');
-
-
-
-
-
-
-
 
 %% Load Study
 
@@ -1346,63 +1220,6 @@ end
 std_erspplot(STUDY, ALLEEG)
 
 
-%% Surface Laplacians CSD toolbox (aka current source density)
-
-% keep default settings
-addpath(genpath('C:\wilken\CSDtoolbox'));
-
-% tutorial: https://psychophysiology.cpmc.columbia.edu/Software/CSDtoolbox/tutorial.html
-% common errors: https://psychophysiology.cpmc.columbia.edu/Software/CSDtoolbox/errors.html
-% FAQ: https://psychophysiology.cpmc.columbia.edu/Software/CSDtoolbox/FAQ.html
-
-% exploit the EEG montage information included in any EEGlab data file to 
-% generate the montage-dependent "Channels × Channels" transformation 
-% matrices G and H (EEGlab_Make_G_H.m), and how to use these 
-% transformation matrices with individual EEGlab data files
-
-% Get usable list of electrodes from EEGlab data structure
-for site = 1:length({ALLEEG(1).chanlocs.labels})
-    trodes{site}=(ALLEEG(1).chanlocs(site).labels);
-end
-trodes=trodes';
-
-% Get Montage for use with CSD Toolbox
-% '10-5-System_Mastoids_EGI129.csd' is a data file with electrode locations
-% according to the 10-5 system 
-Montage_64=ExtractMontage('10-5-System_Mastoids_EGI129.csd',trodes);
-MapMontage(Montage_64);
-
-%% Derive G and H!
-[G,H] = GetGH(Montage_64);
-
-%% Save G and H to later import when doing the CSD transform on files
-% save('G:\PhysioData\MN_Fear\G.mat', 'G');
-% save('G:\PhysioData\MN_Fear\H.mat', 'H');
-
-% revised method to store G and H matrices with CSD montage for later import
-Montage = Montage_64;                             % use generic variable name
-save G:\PhysioData\CSDmontage_64.mat G H Montage; % save variables to Matlab file
-clear G H Montage;                                % remove variables from workspace
-load G:\PhysioData\CSDmontage_64.mat;             % restore variables to the workspace
-
-%% SAMPLE TO OPEN BIOSEMI -- can use instead of neuroscan version above
-% [FileName,PathName,FilterIndex] = uigetfile('L:\Physiodata\*.bdf','Choose File to Open')
-% FullName = [PathName FileName];
-% [ALLEEG EEG CURRENTSET ALLCOM] = eeglab;
-% EEG = pop_biosig(FullName, 'ref',[65 66] ,'blockepoch','off'); % Choose ref sites per your montage
-% [ALLEEG EEG CURRENTSET] = pop_newset(ALLEEG, EEG, 0,'gui','off');
-% eeglab redraw;
-
-tic                                        % stopwatch on
-for ne = 1:length(ALLEEG(1).epoch)               % loop through all epochs
-    myEEG = single(ALLEEG(1).data(:,:,ne));      % reduce data precision to reduce memory demand
-    MyResults = CSD(myEEG,G,H);            % compute CSD for <channels-by-samples> 2-D epoch
-    data(:,:,ne) = MyResults;              % assign data output
-end
-looping_CSD_final = double(data);          % final CSD data
-looping_time = toc                         % stopwatch off
-
-data = NaN;                         % re-initialize data output
 
 
 %% Stuff I tried out.

@@ -85,7 +85,7 @@ epoch_lims_peaks = [-0.5, 0.75];
 
 event_A = {'S 23' 'S 24' 'S 27'};
 event_B = {'S 20' 'S 21'};
-event_peaks = 'S 40';
+event_peaks = {'S 40' 'S 50'};
 
 base_lims_A = [-1000 0];
 base_lims_B = [-1000 0];
@@ -100,6 +100,7 @@ for ind = 1:length(file_names)
     file_name = files2read{ind};
     EEG = pop_loadset(file_name);
     [ALLEEG EEG index] = eeg_store(ALLEEG, EEG);
+    TMPEEG = EEG;
     set_name = TMPEEG.subject;
     TMPEEG.old_urevent = TMPEEG.urevent;
     TMPEEG.urevent = TMPEEG.event;
@@ -139,12 +140,11 @@ if ~strcmp(TMPEEG_A.subject, 'KMY6K') % skip subject 18 Task B cause it is only 
 end
 
         % epoch for peaks & remove baseline 
-    [TMPEEG_peaks, peak_indices] = pop_epoch(TMPEEG, { event_peaks }, epoch_lims_peaks,...
+    [TMPEEG_peaks, peak_indices] = pop_epoch(TMPEEG, event_peaks , epoch_lims_peaks,...
         'newname', TMPEEG.subject, 'epochinfo', 'yes');
     TMPEEG_peaks.epoch_center_peaks = peak_indices;
     TMPEEG_peaks = eeg_checkset( TMPEEG_peaks );
     TMPEEG_peaks = pop_rmbase(TMPEEG_peaks, base_lims_peaks);
-    event_idx = find(strcmp({TMPEEG_peaks.event.type}, event_peaks));
     % save epoched, baseline-corrected data
     TMPEEG_peaks.setname = strjoin([set_name, "_epoched_peaks.set"],"");
     TMPEEG_peaks.setname = pop_saveset(TMPEEG_peaks, 'filename', ...
