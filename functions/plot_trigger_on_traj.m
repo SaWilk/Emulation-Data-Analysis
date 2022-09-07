@@ -3,15 +3,14 @@ function [plot_of_trigger_and_traj] = plot_trigger_on_traj(EEG_sets, traj_struct
 %   requires the output of merge_eeg_and_tracking_data script
 
 % epoch_lim, epoch_cen  % moved from list of input arguments
-% EEG_sets = eeg_struct;
-% EEG_sets = TMPEEG;
-% traj_struct = track_data;
-% subject = 1;
-% trial = 50;
-% task = 'task_a';
-% plot_purs = true;
-% epoch_lim = [-1000,750]; % epoch limits in ms
-% epoch_cen = "S 40"; % epoch center
+EEG_sets = eeg_struct;
+traj_struct = track_data;
+subject = 10;
+trial = 50;
+task = 'task_a';
+plot_purs = true;
+epoch_lim = [-1000,750]; % epoch limits in ms
+epoch_cen = "S 40"; % epoch center
 
 clear handle trig_idx trigger_labels trigger_names trigger_dict triggers handle_legend_idx
 
@@ -21,7 +20,7 @@ trigger_dict = {["exp_start", "S 11"], ["fix", "S 12"], ["trial_start_L", "S 13"
     ["occlusion", "S 20"], ["reappear", "S 21"], ["start_constant", "S 23"], ...
     ["end_constant", "S 24"], ["start_startvec", "S 26"], ["end_startvec", "S 27"], ...
     ["C_too_early", "S 28"], ["C_just_right", "S 29"], ["C_too_late", "S 30"], ...
-    ["peak", "S 40"]};
+    ["peak_traj", "S 40"], ["peak_purs", "S 41"]};
 
 if isnumeric(task)
     task_names = {'task_a', 'task_b', 'task_c'};

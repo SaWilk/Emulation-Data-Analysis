@@ -430,12 +430,6 @@ end
 
 %% Find Peaks of Tracking Data and put them in Events
 
-% TODO: change it to be two different peak markers, one for max, one for
-% min
-% "S 40": Peak max
-% "S 50": Peak min
-
-
 PROMINENCE_TRHESH = 0.01;
 
 for s = 1:size(eeg_struct,2)
@@ -456,11 +450,10 @@ for s = 1:size(eeg_struct,2)
                 current_trial_traj = track_data(s).upsamp_data.(task_names{task})(t).traj_y;
 
                 % get peak indices within trial trajectory data
-                [~, index_max_traj, ~, prom_max_traj] = findpeaks(current_trial_traj);
-                [~, index_min_traj, ~, prom_min_traj] = findpeaks(-current_trial_traj);
-
-                index_max_traj = index_max_traj(prom_max_traj > PROMINENCE_TRHESH);
-                index_min_traj = index_min_traj(prom_min_traj > PROMINENCE_TRHESH);
+                [~, index_max_traj, ~, prom_max_traj] = findpeaks(...
+                    current_trial_traj, 'MinPeakProminence', PROMINENCE_TRHESH);
+                [~, index_min_traj, ~, prom_min_traj] = findpeaks(...
+                    -current_trial_traj, 'MinPeakProminence', PROMINENCE_TRHESH);
 
                 % locate current trial in eeg event
                 cur_trial_idx = find([event_cur_task.trial_number] == t);
@@ -502,7 +495,15 @@ for s = 1:size(eeg_struct,2)
                     %     "end_constant": 24,
                     % replace the copied rows' type with S 40, making sure the
                     % second event is overwritten
+                    % if we deal with a local max,
+                    if any(current_trial_peak_latencies(idx) == index_max_traj)
+                        % assign S 40 to it
                     event_cur_task(current_event_idx+1).type = 'S 40';
+                    % if not, we are dealing with a local min, so give it S
+                    % 50
+                    else
+                        event_cur_task(current_event_idx+1).type = 'S 50';
+                    end
                     event_cur_task(current_event_idx+1).code = 'inserted';
                     event_cur_task(current_event_idx+1).latency = current_peak_latencies(idx);
                     event_cur_task(current_event_idx+1).trial_latency = current_trial_peak_latencies(idx);
@@ -516,9 +517,9 @@ for s = 1:size(eeg_struct,2)
 %                     peak as either having happened while the trajectory
 %                     was occluded or while it was visible. TODO.
 % in the end this will be used in the STUDY to select a design and the
-% independent variable under edit deisgn
+% independent variable under edit deisgn DONE.
 % additional thought: It might also make sense to add the error for each
-% epoch in the event structure as a continuous variable 
+% epoch in the event structure as a continuous variable  DONE
 
                 end
             end
@@ -537,11 +538,6 @@ end
 
 %% Find Peaks of Pursuit Data and put them in Events
 
-% TODO: change it to be two different peak markers, one for max, one for
-% min
-% "S 41": Peak max
-% "S 51": Peak min
-
 % prominence in pixel space at 20 for pursuit peaks 
 % set time window after traj peak - if there is a direction change in the
 % same direction, it counts
@@ -550,6 +546,107 @@ end
 % reject epochs for the erp analysis that do not contain pursuit peaks in
 % the same direction 
 
+PROMINENCE_TRHESH_PURS = 0.05;
+
+for s = 1:size(eeg_struct,2)
+
+    event = eeg_struct(s).track_event_peaks;
+    if ~strcmp(NOLATENCIES, eeg_struct(s).subject)
+        for task = 1:2
+            % get eeg triggers of current task
+            event_cur_task = event(find(strcmp({event.task}, task_names{task})));
+
+            for t = 1:size(track_data(s).upsamp_data.(task_names{task}),2)
+
+                current_trial_purs = track_data(s).upsamp_data.(task_names{task})(t).purs_y;
+
+                % get peak indices within trial trajectory data
+                [~, index_max_purs, ~, prom_max_purs] = findpeaks(...
+                    current_trial_purs, 'MinPeakProminence', PROMINENCE_TRHESH_PURS);
+%                 hold on 
+%                 plot(track_data(s).upsamp_data.(task_names{task})(t).traj_y)
+                [~, index_min_purs, ~, prom_min_purs] = findpeaks(...
+                    -current_trial_purs, 'MinPeakProminence', PROMINENCE_TRHESH_PURS);
+
+                % locate current trial in eeg event
+                cur_trial_idx = find([event_cur_task.trial_number] == t);
+
+                %
+                %             if length(trial_starts) ~= length(trial_ends)
+                %                 warning(strcat(['Subject ', eeg_struct(s).subject, ...
+                %                     ' does not have an equal number of start and end trial ' ...
+                %                     'triggers in ', char(task_names{task}), '. Skipping.']))
+                %                 break
+                %             end
+
+                % get the latencies of the current trial in the eeg data
+                current_start_latency = event_cur_task(cur_trial_idx(1)).latency;
+                current_end_latency = event_cur_task(cur_trial_idx(end)).latency;
+                % add current start latency to the indicies of the peaks (which are in the same sampling rate
+                % as the eeg signal due to upsampling)
+                current_trial_peak_latencies = sort([index_max_purs; index_min_purs]);
+                current_peak_latencies = current_start_latency + current_trial_peak_latencies;
+
+                % for each of the current peak latencies...
+                for idx = 1:length(current_peak_latencies)
+
+                    % find the event that is one event before the peak
+                    % (which is the largest negative latency)
+                    tmp = [[event_cur_task.latency] - current_peak_latencies(idx)];
+                    current_event_idx = max(find(tmp <= 0 ));
+
+                    % insert the peak event markers at position in question
+                    % (copy event before it and adjust its values)
+                    event_cur_task = [event_cur_task(1:current_event_idx-1), ...
+                        event_cur_task(current_event_idx), event_cur_task(current_event_idx:end)];
+
+                    % To which conditions does the peak belong to?
+                    %     "occlusion":    20,
+                    %     "reappear":     21,
+                    %     "fourth_trial": 22,
+                    %     "start_constant": 23,
+                    %     "end_constant": 24,
+                    % replace the copied rows' type with S 40, making sure the
+                    % second event is overwritten
+                    % if we deal with a local max,
+                    if any(current_trial_peak_latencies(idx) == index_max_purs)
+                        % assign S 40 to it
+                    event_cur_task(current_event_idx+1).type = 'S 41';
+                    % if not, we are dealing with a local min, so give it S
+                    % 50
+                    else
+                        event_cur_task(current_event_idx+1).type = 'S 51';
+                    end
+                    event_cur_task(current_event_idx+1).code = 'inserted';
+                    event_cur_task(current_event_idx+1).latency = current_peak_latencies(idx);
+                    event_cur_task(current_event_idx+1).trial_latency = current_trial_peak_latencies(idx);
+                    event_cur_task(current_event_idx+1).trial_latency_ms = event_cur_task(current_event_idx+1).trial_latency/250*1000;
+                    event_cur_task(current_event_idx+1).trial_number = t;
+%                     event_cur_task(current_event_idx+1).occlusion = occ_state;
+%                     event_cur_task(current_event_idx+1).constant = const_state;
+
+                    % in order to separate the peaks in the
+%                     conditions, I need to add a field that labels each
+%                     peak as either having happened while the trajectory
+%                     was occluded or while it was visible. TODO.
+% in the end this will be used in the STUDY to select a design and the
+% independent variable under edit deisgn DONE.
+% additional thought: It might also make sense to add the error for each
+% epoch in the event structure as a continuous variable  DONE
+
+                end
+            end
+            % copy the event structure into a temporary field in eeg_struct
+            eeg_struct(s).(task_names{task}) =  event_cur_task;
+        end
+        % concatenate the two fields so eeglab can work with them
+        eeg_struct(s).track_event_peaks = [eeg_struct(s).(task_names{1}), eeg_struct(s).(task_names{2})];
+    else
+        warning(strcat(['Skipping subject ', eeg_struct(s).subject, ...
+            ' due to unequal number of trial start and trial end triggers!', ...
+            ' And therefore missing trial latencies. ']));
+    end
+end
 
 %% Add latencies of trial a events to trial b events
 
