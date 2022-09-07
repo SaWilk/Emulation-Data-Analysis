@@ -152,12 +152,12 @@ for s = 1:size(ALLEEG, 2)
     mean_struct.time_vec = EEG.times;
 
     % add peaks to know how much power each condition has
-    count_peaks = size(EEG.data, 3) + count_peaks;
-    count_peaks_occ = size(EEG.data(:,:,cond_ind(s).epoch_occ), 3) + count_peaks_occ;
-    count_peaks_vis = size(EEG.data(:,:,cond_ind(s).epoch_vis), 3) + count_peaks_vis;
-    count_peaks_rand1 = size(EEG.data(:,:,cond_ind(s).epoch_rand1), 3) + count_peaks_rand1;
-    count_peaks_const = size(EEG.data(:,:,cond_ind(s).epoch_const), 3) + count_peaks_const;
-    count_peaks_rand2 = size(EEG.data(:,:,cond_ind(s).epoch_rand2), 3) + count_peaks_rand2;
+    count_peaks.all = size(EEG.data, 3) + count_peaks.all;
+    count_peaks.occ = size(EEG.data(:,:,cond_ind(s).epoch_occ), 3) + count_peaks.occ;
+    count_peaks.vis = size(EEG.data(:,:,cond_ind(s).epoch_vis), 3) + count_peaks.vis;
+    count_peaks.rand1 = size(EEG.data(:,:,cond_ind(s).epoch_rand1), 3) + count_peaks.rand1;
+    count_peaks.const = size(EEG.data(:,:,cond_ind(s).epoch_const), 3) + count_peaks.const;
+    count_peaks.rand2 = size(EEG.data(:,:,cond_ind(s).epoch_rand2), 3) + count_peaks.rand2;
 
 end
 
