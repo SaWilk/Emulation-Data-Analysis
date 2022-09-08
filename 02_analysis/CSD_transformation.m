@@ -28,6 +28,12 @@ parent_dir = strjoin(parent_dir, filesep);
 parent_dir_2 = filepath_parts(1:end-2);
 parent_dir_2 = strjoin(parent_dir_2, filesep);
 output_dir = strjoin([parent_dir_2, "Emulation-Data-Output"], filesep);
+mean_matrices_path = strjoin([output_dir, 'mean_matrices'], filesep);
+mkdir(mean_matrices_path);
+mean_matrices_peaks_epoched_path = strjoin([mean_matrices_path, 'peaks'], filesep);
+mkdir(mean_matrices_peaks_epoched_path);
+peak_erp_plots_dir = strjoin([parent_dir, "plots", "erp_plots", "peaks"], filesep);
+mkdir(peak_erp_plots_dir);
 % output
 csd_dir = strjoin([output_dir, "csd_transform"], filesep);
 % input
@@ -144,9 +150,7 @@ figure()
 topoplot(ALLEEG(s).data(:, 200, 1), EEG.chanlocs)
 
 
-%% ERP image
-
-% Load Epoched data
+%% Load CDS data
 
 eeglab;
 
@@ -164,53 +168,15 @@ end
 ALLEEG = ALLEEG2;
 clear ALLEEG2
 
-% put all epochs of all subjects in one dataset
 
-% initialize dataset
+%% Calculate means and normalize data
 
-TMPEEG = ALLEEG(2);
-size(TMPEEG.epoch)
-
-% get all data and all event structures
-for s = 3:length(ALLEEG)
-    TMPEEG.data(:,:,size(TMPEEG.data, 3)+1:...
-        size(TMPEEG.data, 3)+size(ALLEEG(s).data, 3)) = ALLEEG(s).data;
-    epoch_vec = TMPEEG.event(end).epoch + [ALLEEG(s).event.epoch];
-    event_idx = size(TMPEEG.event,2)+1:size(TMPEEG.event,2)+size(ALLEEG(s).event, 2);
-    TMPEEG.event(:, event_idx) = ALLEEG(s).event;
-    for ev = 1:length(event_idx)
-        TMPEEG.event(:, event_idx(ev)).epoch = epoch_vec(ev);
-    end
-    TMPEEG.epoch(:, size(TMPEEG.epoch,2)+1:...
-        size(TMPEEG.epoch,2)+size(ALLEEG(s).epoch, 2)) = ALLEEG(s).epoch;
-    epoch_vec = [];
-end
-
-clear tmp_data
-chan_no = 12;
-chan_lab = 'AF3';
-plot_type = 1; % 1 = channel, 0 = component
-project_channel = [[]];
-smooth = 100; % number of trials
-title = chan_lab;
-decimate = 50; % ratio of trials in to plot out. 
-sort_type = {'S 40'};
-sort_win = [-0.1 0.1];
-sort_event_field = 'epoch_error';
-TMPALLEEG = [];
-
-[ALLEEG TMPEEG index] = eeg_store(ALLEEG, TMPEEG)
-eeglab redraw
-
-EEG = ALLEEG(s);
-EEG.tmp_data = squeeze(ALLEEG(s).data(chan_no, :, :));
-% tmp_data(:, end+1:end+size(ALLEEG(s+1).data(chan_no, :, :),3)) = squeeze(ALLEEG(s+1).data(chan_no, :, :));
-figure;
-pop_erpimage(TMPEEG,plot_type, chan_no,project_channel,title,smooth,decimate,...
-    sort_type,sort_win,sort_event_field ,'yerplabel','\muV','erp','on','cbar','on','align',Inf,'topo', { [12] EEG.chanlocs EEG.chaninfo } );
-
-length(unique([TMPEEG.event.epoch_error]))
-size(TMPEEG.data)
+count_peaks.all = 0;
+count_peaks.occ = 0;
+count_peaks.vis = 0;
+count_peaks.rand1 = 0;
+count_peaks.const = 0;
+count_peaks.rand2 = 0;
 
 for s = 1:size(ALLEEG, 2)
 
@@ -274,33 +240,63 @@ for s = 1:size(ALLEEG, 2)
 
     % get time vec
     mean_struct.time_vec = EEG.times;
+    z_mean_struct.time_vec = EEG.times;
+
 
     % add peaks to know how much power each condition has
-    count_peaks = size(EEG.CSD_data, 3) + count_peaks;
-    count_peaks_occ = size(EEG.CSD_data(:,:,cond_ind(s).epoch_occ), 3) + count_peaks_occ;
-    count_peaks_vis = size(EEG.CSD_data(:,:,cond_ind(s).epoch_vis), 3) + count_peaks_vis;
-    count_peaks_rand1 = size(EEG.CSD_data(:,:,cond_ind(s).epoch_rand1), 3) + count_peaks_rand1;
-    count_peaks_const = size(EEG.CSD_data(:,:,cond_ind(s).epoch_const), 3) + count_peaks_const;
-    count_peaks_rand2 = size(EEG.CSD_data(:,:,cond_ind(s).epoch_rand2), 3) + count_peaks_rand2;
+    count_peaks.all = size(EEG.CSD_data, 3) + count_peaks.all;
+    count_peaks.occ = size(EEG.CSD_data(:,:,cond_ind(s).epoch_occ), 3) + count_peaks.occ;
+    count_peaks.vis = size(EEG.CSD_data(:,:,cond_ind(s).epoch_vis), 3) + count_peaks.vis;
+    count_peaks.rand1 = size(EEG.CSD_data(:,:,cond_ind(s).epoch_rand1), 3) + count_peaks.rand1;
+    count_peaks.const = size(EEG.CSD_data(:,:,cond_ind(s).epoch_const), 3) + count_peaks.const;
+    count_peaks.rand2 = size(EEG.CSD_data(:,:,cond_ind(s).epoch_rand2), 3) + count_peaks.rand2;
 
 end
+
+epoch_weights = z_mean_struct.num_epochs_all/mean(z_mean_struct.num_epochs_all);
+epoch_weights_occ_on = z_mean_struct.num_epochs_all/mean(z_mean_struct.num_epochs_occ_on);
+epoch_weights_occ_off = z_mean_struct.num_epochs_all/mean(z_mean_struct.num_epochs_occ_off);
+epoch_weights_rand1 = z_mean_struct.num_epochs_all/mean(z_mean_struct.num_epochs_rand1);
+epoch_weights_const = z_mean_struct.num_epochs_all/mean(z_mean_struct.num_epochs_const);
+epoch_weights_rand2 = z_mean_struct.num_epochs_all/mean(z_mean_struct.num_epochs_rand2);
+
+
+for ep = 1:size(z_mean_struct.all, 3)
+
+    z_mean_struct.all(:,:,ep) = z_mean_struct.all(:,:,ep) * epoch_weights(ep);
+    z_mean_struct.occ_on(:,:,ep) = z_mean_struct.occ_on(:,:,ep) * epoch_weights_occ_on(ep);
+    z_mean_struct.occ_off(:,:,ep) = z_mean_struct.occ_off(:,:,ep) * epoch_weights_occ_off(ep);
+    z_mean_struct.rand1(:,:,ep) = z_mean_struct.rand1(:,:,ep) * epoch_weights_rand1(ep);
+    z_mean_struct.const(:,:,ep) = z_mean_struct.const(:,:,ep) * epoch_weights_const(ep);
+    z_mean_struct.rand2(:,:,ep) = z_mean_struct.rand2(:,:,ep) * epoch_weights_rand2(ep);
+
+end
+
+
+%% Save the Mean Matrices for Convenient Loading
+
+cd(mean_matrices_peaks_epoched_path)
+save("mean_struct_csd.mat", 'mean_struct')
+save("condition_indices_csd.mat", 'cond_ind')
+save("count_peaks_csd.mat", 'count_peaks')
+save("z_mean_struct_csd.mat", 'z_mean_struct')
 
 
 %% Prepare for Topoplotting
 
 cd(mean_matrices_peaks_epoched_path)
 
-load('mean_struct.mat')
+load('z_mean_struct_csd.mat')
 
 avg_peak_dist = 300;
 % average across subjects
-epoch_mean_all = mean(mean_struct.all,3);
-epoch_mean_occ = mean(mean_struct.occ_on,3, 'omitnan'); % omitnan is
+z_epoch_mean_all = mean(z_mean_struct.all,3);
+z_epoch_mean_occ = mean(z_mean_struct.occ_on,3, 'omitnan'); % omitnan is
 % % necessary because subject 18 has no task B
-epoch_mean_vis = mean(mean_struct.occ_off,3);
-epoch_mean_rand1 = mean(mean_struct.rand1,3);
-epoch_mean_const = mean(mean_struct.const,3);
-epoch_mean_rand2 = mean(mean_struct.rand2,3);
+z_epoch_mean_vis = mean(z_mean_struct.occ_off,3);
+z_epoch_mean_rand1 = mean(z_mean_struct.rand1,3);
+z_epoch_mean_const = mean(z_mean_struct.const,3);
+z_epoch_mean_rand2 = mean(z_mean_struct.rand2,3);
 
 % specify parameters for topoplotting
 base_dur = 500;
@@ -315,17 +311,17 @@ latencies_offset = latencies_onset + topo_dur;
 % extract means across topo_dur ms periods for topoplot
 for i = 1:length(latencies_onset)
 
-    [~, lat_idx_onset] = min(abs(mean_struct.time_vec - latencies_onset(i)));
-    [~, lat_idx_offset] = min(abs(mean_struct.time_vec - latencies_offset(i)));
-    topo_struct.all(:, i) = mean(epoch_mean_all(:,lat_idx_onset:lat_idx_offset), 2);
-    topo_struct.vis(:, i) = mean(epoch_mean_vis(:,lat_idx_onset:lat_idx_offset), 2);
-    topo_struct.occ(:, i) = mean(epoch_mean_occ(:,lat_idx_onset:lat_idx_offset), 2);
-    topo_struct.const(:, i) = mean(epoch_mean_const(:,lat_idx_onset:lat_idx_offset), 2);
-    topo_struct.rand1(:, i) = mean(epoch_mean_rand1(:,lat_idx_onset:lat_idx_offset), 2);
-    topo_struct.rand2(:, i) = mean(epoch_mean_rand2(:,lat_idx_onset:lat_idx_offset), 2);
-    topo_struct.diff_occ(:, i) = mean(mean_struct.diff_occ(:,lat_idx_onset:lat_idx_offset), 2);
-    topo_struct.diff_const_rand1(:, i) = mean(mean_struct.diff_const_rand1(:,lat_idx_onset:lat_idx_offset), 2);
-    topo_struct.diff_const_rand2(:, i) = mean(mean_struct.diff_const_rand2(:,lat_idx_onset:lat_idx_offset), 2);
+    [~, lat_idx_onset] = min(abs(z_mean_struct.time_vec - latencies_onset(i)));
+    [~, lat_idx_offset] = min(abs(z_mean_struct.time_vec - latencies_offset(i)));
+    topo_struct.all(:, i) = mean(z_epoch_mean_all(:,lat_idx_onset:lat_idx_offset), 2);
+    topo_struct.vis(:, i) = mean(z_epoch_mean_vis(:,lat_idx_onset:lat_idx_offset), 2);
+    topo_struct.occ(:, i) = mean(z_epoch_mean_occ(:,lat_idx_onset:lat_idx_offset), 2);
+    topo_struct.const(:, i) = mean(z_epoch_mean_const(:,lat_idx_onset:lat_idx_offset), 2);
+    topo_struct.rand1(:, i) = mean(z_epoch_mean_rand1(:,lat_idx_onset:lat_idx_offset), 2);
+    topo_struct.rand2(:, i) = mean(z_epoch_mean_rand2(:,lat_idx_onset:lat_idx_offset), 2);
+%     topo_struct.diff_occ(:, i) = mean(z_mean_struct.diff_occ(:,lat_idx_onset:lat_idx_offset), 2);
+%     topo_struct.diff_const_rand1(:, i) = mean(z_mean_struct.diff_const_rand1(:,lat_idx_onset:lat_idx_offset), 2);
+%     topo_struct.diff_const_rand2(:, i) = mean(z_mean_struct.diff_const_rand2(:,lat_idx_onset:lat_idx_offset), 2);
 
 end
 
@@ -351,7 +347,160 @@ for i = 1:length(latencies_onset)
         num2str(latencies_offset(i)), ' ms']))
     colorbar()
 end
-sgtitle(strcat(['epochs around peaks all subjects all trials,']))
+sgtitle(strcat(['epochs around peaks all subjects all trials, CSD transformed, normalized and weighted per subj']))
 
-savefig('all_condition_peaks_topo')
+savefig('all_condition_peaks_topo_csd_z')
+
+%% Prepare ERP Plotting 
+
+cd(mean_matrices_peaks_epoched_path)
+
+load('mean_struct_csd.mat')
+
+avg_peak_dist = 300;
+% average across subjects
+epoch_mean_all = mean(mean_struct.all,3);
+epoch_mean_occ = mean(mean_struct.occ_on,3, 'omitnan'); % omitnan is
+% % necessary because subject 18 has no task B
+epoch_mean_vis = mean(mean_struct.occ_off,3);
+epoch_mean_rand1 = mean(mean_struct.rand1,3);
+epoch_mean_const = mean(mean_struct.const,3);
+epoch_mean_rand2 = mean(mean_struct.rand2,3);
+
+load('z_mean_struct_csd.mat')
+
+% get z-weighted mean for all subjects
+z_epoch_mean_all = mean(z_mean_struct.all,3);
+z_epoch_mean_occ_on = mean(z_mean_struct.occ_on,3, 'omitnan');
+z_epoch_mean_occ_off = mean(z_mean_struct.occ_off,3, 'omitnan');
+z_epoch_mean_rand1 = mean(z_mean_struct.rand1,3);
+z_epoch_mean_const = mean(z_mean_struct.const,3);
+z_epoch_mean_rand2 = mean(z_mean_struct.rand2,3);
+
+base_dur = 500;
+
+load('count_peaks.mat')
+
+title_string = strcat(...
+    ['ERP CSD transformed of all subjects averaged across epochs around peaks, n = ', ...
+    num2str(count_peaks.all), ' epochs']);
+title_string_z = strcat(...
+    ['z-normalized ERP, CSD transformed of all subjects averaged across epochs around peaks, n = ', ...
+    num2str(count_peaks.all), ' epochs']);
+subtitle_string = strcat(['all channels']);
+
+
+%% Plot ERPs as grand average and save plots
+
+
+cd(peak_erp_plots_dir)
+
+% Average ERP Plots
+figure()
+[~, min_ind] = plot_ERP(epoch_mean_all, mean_struct.time_vec, base_dur, title_string, subtitle_string);
+savefig('all_condition_peaks_erp_csd')
+
+cd(peak_erp_plots_dir)
+
+% Average ERP Plots of z-score
+
+figure()
+[~, min_ind] = plot_ERP(z_epoch_mean_all, mean_struct.time_vec, base_dur, title_string_z, subtitle_string);
+savefig('all_condition_peaks_erp_z_csd')
+
+
+%% Get electrodes of largest deflection
+% prepare single-channel plotting
+
+interesting_window = max(find(latencies_onset < 190 )); % find the topo window
+% that is the most interesting in previous ERP plots. 
+[~, min_chan_idx] = mink(topo_struct.all(:, interesting_window),3); % find the 
+% three channels with the lowest defleciton
+chan_lab = {ALLEEG(1).chanlocs(min_chan_idx).labels};
+
+% Single Channel ERP Plot + Topo
+% Plots the electrode that shows the biggest amplitude in the ERP
+
+figure()
+subplot(1, 2, 1)
+title_string = strjoin(['electrode ', chan_lab, ', all subjects, all conditions around peaks.'])
+subtitle_string = strjoin(['channel ', chan_lab]);
+plot(mean_struct.time_vec, z_epoch_mean_all(min_chan_idx, :), 'LineWidth', 1.1)
+title(title_string_z)
+subtitle(subtitle_string)
+hold on 
+xline(0)
+hold off
+legend({chan_lab{:}, "peak"})
+subplot(1, 2, 2)
+topoplot(topo_struct.all(:, interesting_window), chan_locs, 'maplimits',  ...
+    zlims, 'emarker2', {min_chan_idx,'s','m'}, 'electrodes','labelpoint')
+title(strcat(['average of ', num2str(latencies_onset(interesting_window)), ' to ', ...
+    num2str(latencies_offset(interesting_window)), ' ms']))
+sgtitle(strjoin(['epochs around peaks all subjects all trials, elec ', chan_lab, ' are highlighted (3 min amp at 200ms win)']))
+
+savefig('all_condition_peaks_topo_single_csd_z')
+
+
+%% ERP image
+
+% put all epochs of all subjects in one dataset
+% TODO: Normalize data from each subject
+% TODO: add in also event 'S 50'
+% initialize dataset
+% TODO: Current Bugs: Subject 1 does not yet have a pursuit latency field
+% TODO: Last Subject has no negative peaks (only S40) and no pursuit peaks
+clear z_ALLEEG TMPEEG EEG z_mean_struct mean_struct
+sum(arrayfun(@(s) length(s.epoch), ALLEEG)) % how many epochs we need. 
+TMPEEG = ALLEEG(2);
+
+% get all data and all event structures
+for s = 1:length(ALLEEG)-2
+    % normalize each subjects' data
+    z_tmpEEG = ALLEEG(s+1);
+    % normalize data
+    z_tmpEEG.data = normalize(ALLEEG(s+1).data,2, 'zscore');
+    % get location where new data should go
+    data_idx = size(TMPEEG.data, 3)+1:size(TMPEEG.data, 3)+size(z_tmpEEG.data, 3);
+    % concatenate subject data in one dataset
+    TMPEEG.data(:,:,data_idx) = z_tmpEEG.data;
+    % get epoch vectors
+    epoch_vec = TMPEEG.event(end).epoch + [z_tmpEEG.event.epoch];
+    % get event indices
+    event_idx = size(TMPEEG.event,2)+1:size(TMPEEG.event,2)+size(z_tmpEEG.event, 2);
+    % add events from previous subject to TMPEEG
+    TMPEEG.event(:, event_idx) = z_tmpEEG.event;
+    for ev = 1:length(event_idx)
+        TMPEEG.event(:, event_idx(ev)).epoch = epoch_vec(ev);
+    end
+    TMPEEG.epoch(:, size(TMPEEG.epoch,2)+1:...
+        size(TMPEEG.epoch,2)+size(z_tmpEEG.epoch, 2)) = z_tmpEEG.epoch;
+    epoch_vec = [];
+end
+
+length(TMPEEG.epoch)
+
+% electrode 13 is of the most interest now. 
+
+chan_lab = 'FC6';
+chan_no = find(strcmp({TMPEEG.chanlocs.labels}, chan_lab));
+plot_type = 1; % 1 = channel, 0 = component
+project_channel = [[]];
+smooth = round(length(TMPEEG.epoch)/15,0); % number of trials
+dec_fac = smooth/2; % ratio of trials in to plot out. 
+% if the smoothing width is larger than twice the decimation factor, no
+% info is lost. 
+title = strjoin(["Smoothing factor " smooth,", decimate " dec_fac ", chan " chan_lab]);
+sort_type = {'S 40' 'S 50'};
+sort_win = [-0.1 0.1];
+sort_event_field = 'epoch_error';
+align = Inf;
+
+[ALLEEG TMPEEG index] = eeg_store(ALLEEG, TMPEEG);
+eeglab redraw
+
+figure; 
+pop_erpimage(TMPEEG,plot_type, chan_no,[[]], title,smooth, dec_fac, ...
+    sort_type,[],sort_event_field ,'yerplabel','\muV','erp','on', ...
+    'cbar','on','align',Inf,'topo', { chan_no EEG.chanlocs EEG.chaninfo } );
 
