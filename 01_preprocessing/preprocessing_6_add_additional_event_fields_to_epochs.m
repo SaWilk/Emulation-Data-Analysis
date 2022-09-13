@@ -183,6 +183,7 @@ for s = 1:length(ALLEEG)
             % calculate latency to next pursuit peak
             % is there a pursuit peak in the same direction in the epoch?
             all_events = EEG.epoch(ep).eventtype;
+            % positive peaks...
             if strcmp(peak_type, 'S 40')
                 purs_peak_idx = find(strcmp(all_events, 'S 41'));
                 % if there is a pursuit peak in the same direction and it
@@ -198,6 +199,7 @@ for s = 1:length(ALLEEG)
                     no_purs = no_purs + 1;
                     purs_lat = [];
                 end
+            % negative peaks...
             elseif strcmp(peak_type, 'S 50')
                 purs_peak_idx = find(strcmp(all_events, 'S 51'));
                 % if there is a pursuit peak in the same direction and it
@@ -233,3 +235,9 @@ for s = 1:length(ALLEEG)
 end
 
 eeglab redraw
+
+% at this time, 16817 trajectory peaks are not followed by a pursuit peak
+% criteria: 
+% - pursuit peak with prominence = 0.05
+% - a pursuit peak must follow the trajectory peak in the same epoch
+% - pursuit and trajectory peaks must go in the same direction (up or down)
