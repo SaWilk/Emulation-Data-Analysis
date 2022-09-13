@@ -116,10 +116,10 @@ for frq = 1:size(freq_label, 2)
     end % contrast loop
 end % freq loop
 
-save([datapath filesep 'source_ratio_all_avg'], "source_ratio_all_avg");
+%save([datapath filesep 'source_ratio_all_avg'], "source_ratio_all_avg");
 
 %% interpolate data on MRI and save
-% 
+
 %load averaged source data
 load([datapath filesep 'source_ratio_all_avg']);
 
@@ -136,30 +136,22 @@ for frq = 1:size(freq_label, 2)
         source_ratio_avg_int.(freq_label{frq}).(this_contrast) = ft_sourceinterpolate(cfg, source_ratio_all_avg.(freq_label{frq}).(this_contrast), mri);
     end % contrast loop
 end % freq loop
-% 
-%% plotting
 
-% add main title with freqband and condition
+%% plotting
 
 cfg                 = [];
 cfg.funparameter    = 'pow';
 cfg.maskparameter   = 'mask';
-%cfg.maskparameter   = cfg.funparameter;
 cfg.method          = 'slice';
 cfg.camlight        = 'off';
 cfg.slicedim        = 1;
 cfg.nslices         = 20;
 cfg.funcolormap     = bipolar;
+% cfg.funcolorlim     = [-5 5];
 cfg.funcolorlim     = 'maxabs';
 
 ft_sourceplot(cfg, source_ratio_avg_int.theta.const_rand1);
-set(gcf, 'color', 'black')                              % make it look nice
-set(gcf,'inverthardcopy','off');
-%set(gcf, 'Position', get(0, 'Screensize'));             % make it big
-c = colorbar;
-ylabel(c,'RATIO [(const-rand1)/(const+rand1)]');
-c.Color = 'w';
-print(gcf,fullfile(PATHOUT,['DICS_GA_',conf.band{freqband},'_post_5mm','.png']),'-dpng','-r1000')
+
 
 
 
