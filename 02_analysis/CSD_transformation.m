@@ -351,6 +351,7 @@ sgtitle(strcat(['epochs around peaks all subjects all trials, CSD transformed, n
 
 savefig('all_condition_peaks_topo_csd_z')
 
+
 %% Prepare ERP Plotting 
 
 cd(mean_matrices_peaks_epoched_path)
@@ -412,45 +413,100 @@ savefig('all_condition_peaks_erp_z_csd')
 %% Get electrodes of largest deflection
 % prepare single-channel plotting
 
+% find minimal deflection
 interesting_window = max(find(latencies_onset < 190 )); % find the topo window
 % that is the most interesting in previous ERP plots. 
 [~, min_chan_idx] = mink(topo_struct.all(:, interesting_window),3); % find the 
 % three channels with the lowest defleciton
-chan_lab = {ALLEEG(1).chanlocs(min_chan_idx).labels};
+chan_lab_min = {ALLEEG(1).chanlocs(min_chan_idx).labels};
+
+% find maximal defleciton
+interesting_window = max(find(latencies_onset < 190 )); % find the topo window
+% that is the most interesting in previous ERP plots. 
+[~, max_chan_idx] = maxk(topo_struct.all(:, interesting_window),3); % find the 
+% three channels with the lowest defleciton
+chan_lab_max = {ALLEEG(1).chanlocs(max_chan_idx).labels};
+
+% find maximal defleciton at 240-270
+interesting_window = max(find(latencies_onset < 240 )); % find the topo window
+% that is the most interesting in previous ERP plots. 
+[~, max_chan_idx_240_270] = maxk(topo_struct.all(:, interesting_window),3); % find the 
+% three channels with the lowest defleciton
+chan_lab_max_240_270 = {ALLEEG(1).chanlocs(max_chan_idx_240_270).labels};
 
 % Single Channel ERP Plot + Topo
 % Plots the electrode that shows the biggest amplitude in the ERP
 
 figure()
 subplot(1, 2, 1)
-title_string = strjoin(['electrode ', chan_lab, ', all subjects, all conditions around peaks.'])
-subtitle_string = strjoin(['channel ', chan_lab]);
+title_string = strjoin(['electrode ', chan_lab_min, ', all subjects, all conditions around peaks.'])
+subtitle_string = strjoin(['channel ', chan_lab_min]);
 plot(mean_struct.time_vec, z_epoch_mean_all(min_chan_idx, :), 'LineWidth', 1.1)
 title(title_string_z)
 subtitle(subtitle_string)
 hold on 
 xline(0)
 hold off
-legend({chan_lab{:}, "peak"})
+legend({chan_lab_min{:}, "peak"})
 subplot(1, 2, 2)
 topoplot(topo_struct.all(:, interesting_window), chan_locs, 'maplimits',  ...
     zlims, 'emarker2', {min_chan_idx,'s','m'}, 'electrodes','labelpoint')
 title(strcat(['average of ', num2str(latencies_onset(interesting_window)), ' to ', ...
     num2str(latencies_offset(interesting_window)), ' ms']))
-sgtitle(strjoin(['epochs around peaks all subjects all trials, elec ', chan_lab, ' are highlighted (3 min amp at 200ms win)']))
+sgtitle(strjoin(['epochs around peaks all subjects all trials, elec ', chan_lab_min, ' are highlighted (3 min amp at 200ms win)']))
 
-savefig('all_condition_peaks_topo_single_csd_z')
+savefig('all_condition_peaks_min_180-210_topo_single_csd_z')
 
+
+figure()
+subplot(1, 2, 1)
+title_string = strjoin(['electrode ', chan_lab_max, ', all subjects, all conditions around peaks.'])
+subtitle_string = strjoin(['channel ', chan_lab_max]);
+plot(mean_struct.time_vec, z_epoch_mean_all(max_chan_idx, :), 'LineWidth', 1.1)
+title(title_string_z)
+subtitle(subtitle_string)
+hold on 
+xline(0)
+hold off
+legend({chan_lab_max{:}, "peak"})
+subplot(1, 2, 2)
+topoplot(topo_struct.all(:, interesting_window), chan_locs, 'maplimits',  ...
+    zlims, 'emarker2', {max_chan_idx,'s','m'}, 'electrodes','labelpoint')
+title(strcat(['average of ', num2str(latencies_onset(interesting_window)), ' to ', ...
+    num2str(latencies_offset(interesting_window)), ' ms']))
+sgtitle(strjoin(['epochs around peaks all subjects all trials, elec ', chan_lab_max, ' are highlighted (3 min amp at 200ms win)']))
+
+savefig('all_condition_peaks_max_180-210_topo_single_csd_z')
+
+
+figure()
+subplot(1, 2, 1)
+title_string = strjoin(['electrode ', chan_lab_max_240_270, ', all subjects, all conditions around peaks.'])
+subtitle_string = strjoin(['channel ', chan_lab_max_240_270]);
+plot(mean_struct.time_vec, z_epoch_mean_all(max_chan_idx_240_270, :), 'LineWidth', 1.1)
+title(title_string_z)
+subtitle(subtitle_string)
+hold on 
+xline(0)
+hold off
+legend({chan_lab_max_240_270{:}, "peak"})
+subplot(1, 2, 2)
+topoplot(topo_struct.all(:, interesting_window), chan_locs, 'maplimits',  ...
+    zlims, 'emarker2', {max_chan_idx_240_270,'s','m'}, 'electrodes','labelpoint')
+colorbar()
+title(strcat(['average of ', num2str(latencies_onset(interesting_window)), ' to ', ...
+    num2str(latencies_offset(interesting_window)), ' ms']))
+sgtitle(strjoin(['epochs around peaks all subjects all trials, elec ', chan_lab_max_240_270, ' are highlighted (3 min amp at 200ms win)']))
+
+savefig('all_condition_peaks_max_240-270_topo_single_csd_z')
 
 %% ERP image
 
 % put all epochs of all subjects in one dataset
-% TODO: Normalize data from each subject
-% TODO: add in also event 'S 50'
 % initialize dataset
 % TODO: Current Bugs: Subject 1 does not yet have a pursuit latency field
 % TODO: Last Subject has no negative peaks (only S40) and no pursuit peaks
-clear z_ALLEEG TMPEEG EEG z_mean_struct mean_struct
+clear z_ALLEEG TMPEEG z_mean_struct mean_struct
 sum(arrayfun(@(s) length(s.epoch), ALLEEG)) % how many epochs we need. 
 TMPEEG = ALLEEG(2);
 
@@ -478,11 +534,10 @@ for s = 1:length(ALLEEG)-2
     epoch_vec = [];
 end
 
-length(TMPEEG.epoch)
+TMPEEG.trials = length(TMPEEG.epoch)
 
-% electrode 13 is of the most interest now. 
-
-chan_lab = 'FC6';
+% actual erp image parameters
+chan_lab = 'F1';
 chan_no = find(strcmp({TMPEEG.chanlocs.labels}, chan_lab));
 plot_type = 1; % 1 = channel, 0 = component
 project_channel = [[]];
@@ -493,14 +548,15 @@ dec_fac = smooth/2; % ratio of trials in to plot out.
 title = strjoin(["Smoothing factor " smooth,", decimate " dec_fac ", chan " chan_lab]);
 sort_type = {'S 40' 'S 50'};
 sort_win = [-0.1 0.1];
-sort_event_field = 'epoch_error';
+sort_event_field = 'pursuit_lat';
 align = Inf;
-
+% 
 [ALLEEG TMPEEG index] = eeg_store(ALLEEG, TMPEEG);
-eeglab redraw
+% eeglab redraw
 
+% plotting of ERP image
 figure; 
-pop_erpimage(TMPEEG,plot_type, chan_no,[[]], title,smooth, dec_fac, ...
+thingy = pop_erpimage(TMPEEG,plot_type, chan_no,[[]], title,smooth, dec_fac, ...
     sort_type,[],sort_event_field ,'yerplabel','\muV','erp','on', ...
-    'cbar','on','align',Inf,'topo', { chan_no EEG.chanlocs EEG.chaninfo } );
+    'cbar','on','align',Inf,'topo', { chan_no TMPEEG.chanlocs TMPEEG.chaninfo } );
 
