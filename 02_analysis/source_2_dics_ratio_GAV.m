@@ -44,6 +44,7 @@ subjects(18) = [];
 % initialize input and output folder
 % input: segmented and preprocessed time domain data 
 datapath      = 'R:\AG-Beste-Studien\Emulation\06_analysis\Emulation-Data-Output\11_DICS';
+plots_path    = 'R:\AG-Beste-Studien\Emulation\06_analysis\Emulation-Data-Output\11_DICS\plots';
 
 %% load MRI for plotting
 
@@ -116,10 +117,10 @@ for frq = 1:size(freq_label, 2)
     end % contrast loop
 end % freq loop
 
-save([datapath filesep 'source_ratio_all_avg'], "source_ratio_all_avg");
+save([datapath filesep 'source_ratio_all_avg'], "source_ratio_all_avg", '-v7.3');
 
 %% interpolate data on MRI and save
-% 
+
 %load averaged source data
 load([datapath filesep 'source_ratio_all_avg']);
 
@@ -127,7 +128,7 @@ source_ratio_avg_int = [];
 
 % create new data frame with interpolated data for each freq and contrast
 for frq = 1:size(freq_label, 2)
-    for contr = 1%:size(contrasts_A, 2)
+    for contr = 1:size(contrasts_A, 2)
 
         this_contrast = [contrasts_A{contr}{1} '_' contrasts_A{contr}{2}];
 
@@ -136,10 +137,11 @@ for frq = 1:size(freq_label, 2)
         source_ratio_avg_int.(freq_label{frq}).(this_contrast) = ft_sourceinterpolate(cfg, source_ratio_all_avg.(freq_label{frq}).(this_contrast), mri);
     end % contrast loop
 end % freq loop
-% 
-%% plotting
 
-% add main title with freqband and condition
+% save interpolated data
+save([datapath filesep 'source_ratio_avg_int'], "source_ratio_avg_int", '-v7.3');
+
+%% plotting
 
 cfg                 = [];
 cfg.funparameter    = 'pow';
@@ -149,53 +151,18 @@ cfg.method          = 'slice';
 cfg.camlight        = 'off';
 cfg.slicedim        = 1;
 cfg.nslices         = 20;
-cfg.funcolormap     = bipolar;
+cfg.funcolormap     = 'bipolar';
 cfg.funcolorlim     = 'maxabs';
 
-ft_sourceplot(cfg, source_ratio_avg_int.theta.const_rand1);
-set(gcf, 'color', 'black')                              % make it look nice
-set(gcf,'inverthardcopy','off');
-%set(gcf, 'Position', get(0, 'Screensize'));             % make it big
-c = colorbar;
-ylabel(c,'RATIO [(const-rand1)/(const+rand1)]');
-c.Color = 'w';
-print(gcf,fullfile(PATHOUT,['DICS_GA_',conf.band{freqband},'_post_5mm','.png']),'-dpng','-r1000')
-
-
-
-% 
-%        cfg                         = [];
-%         cfg.parameter               = 'pow';
-%         sourcePost_RATIO_avg_INT    = ft_sourceinterpolate(cfg, sourcePost_RATIO_avg, mri);
-%         
-%         cfg                         = [];
-%         cfg.parameter               = 'nai';
-%         sourcePre_NAI_avg_INT       = ft_sourceinterpolate(cfg, sourcePre_NAI_avg, mri);
-%         
-%         
-%         cfg                 = [];
-%         cfg.funparameter    = 'pow';
-%         cfg.maskparameter   = 'mask';
-%         cfg.method          = 'slice';
-%         cfg.camlight        = 'off';
-%         cfg.slicedim        = 1;
-%         cfg.nslices         = 20;
-%         cfg.funcolormap     = bipolar;
-%         % cfg.funcolorlim     = [-5 5];
-%         cfg.funcolorlim     = 'maxabs';
-%         
-%         % WITHIN
-%         ft_sourceplot(cfg, sourcePost_RATIO_avg_INT);
-%         
-%         set(gcf, 'color', 'black')                              % make it look nice
-%         set(gcf,'inverthardcopy','off');
-%         %set(gcf, 'Position', get(0, 'Screensize'));             % make it big
-%         c = colorbar;
-%         ylabel(c,'RATIO [(SAME-DIFF)/(SAME+DIFF)]');
-%         c.Color = 'w';
-%         print(gcf,fullfile(PATHOUT,['DICS_GA_',conf.band{freqband},'_post_5mm','.png']),'-dpng','-r1000')
-% 
-% 
-% 
-% 
-% 
+for frq = 1:size(freq_label, 2)
+    for contr = 1:size(contrasts_A, 2)
+        ft_sourceplot(cfg, source_ratio_avg_int.(freq_label{frq}).([contrasts_A{contr}{1} '_' contrasts_A{contr}{2}]));
+        set(gcf, 'color', 'black') % black background                     
+        set(gcf,'inverthardcopy','off'); %black background also for printed figure
+        title([freq_label{frq} ' power for contrast: ' contrasts_A{contr}{1} ' vs. ' contrasts_A{contr}{2}], 'Color', 'w');
+        c = colorbar;
+        ylabel(c,['[(' contrasts_A{contr}{1} '-' contrasts_A{contr}{2} ')/(' contrasts_A{contr}{1} '+' contrasts_A{contr}{2} ')]']);
+        c.Color = 'w';
+        print(gcf,fullfile(plots_path, ['DICS_A_GAV_' freq_label{frq} '_' contrasts_A{contr}{1} '_' contrasts_A{contr}{2} '_5mm.png']),'-dpng','-r1000')
+    end % contrast loop
+end % freqband loop
