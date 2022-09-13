@@ -2,21 +2,19 @@
 % Emulation pilot study 2021
 
 % This script contains: 
-% * load whole trial data for subject
-% * reduce data to smaller epoch (before, a bigger time window was used for
-%   wavelet analysis 1-35 Hz), 
-% * calculate cross spectral density for each condition + appended for
+% * load whole trial data for subject, task B
+% * reduce to smaller time window (0-2 s) --> no significant time window
+%   extracted from CBPT, whole window was significant for theta
+% * calculate cross spectral density for each condition + append for
 %   contrast
-% * DICS beamformer applied to calculate common spatial filter for contrasts:
-%       const vs. rand1
-%       const vs. rand2
-%       rand1 vs. rand2
-% * apply spatial filter for each condition
+% * DICS beamformer to calculate common spatial filter for contrast:
+%       occl vs. nonooccl
+% * apply common spatial filter for each condition
 
-% for TBA, ABA, BBA
+% for TBA (ABA and BBA not sig in CBPT)
 
 % Adriana Böttcher
-% 06.09.2022
+% 12.09.2022
 
 %% configuration
 tic
@@ -25,19 +23,19 @@ clc;
 clearvars;
 
 % contrasts with conditions
-contrasts_A = {
-    {'const', 'rand1'}, ...
-    {'const', 'rand2'}, ...
-    %{'rand1', 'rand2'} ... % not significant 
+% just one contrast for B
+contrasts_B = {
+    {'occl', 'nonoccl'} ...
     };
 
-% contrasts_B = {
-%     {'occl', 'nonoccl'} ...
-%     };
-
 % freq bands
-freq_bands      = {[4 7] [8 12] [13 30]};
-freq_label      = {'theta' 'alpha' 'beta'};
+% only theta band for B, others were not significant
+freq_bands      = {[4 7]};
+freq_label      = {'theta'};
+
+% time window
+sig_window_start = 0;
+sig_window_end   = 2;
 
 %% path definition
 
@@ -53,13 +51,8 @@ load('subjects.mat');
 subjects(18) = [];
 
 % initialize input and output folder
-% input: segemented and preprocessed time domain data
-inputpath_preprocessed    = 'R:\AG-Beste-Studien\Emulation\06_analysis\Emulation-Data-Output\07_data_ft';
-inputpath_segmented_A     = 'R:\AG-Beste-Studien\Emulation\06_analysis\Emulation-Data-Output\08_ft_segments_A';
+% input: segmented and preprocessed time domain data
 inputpath_segmented_B     = 'R:\AG-Beste-Studien\Emulation\06_analysis\Emulation-Data-Output\08_ft_segments_B';
-% for significant time window, load CBPT output
-load('R:\AG-Beste-Studien\Emulation\06_analysis\Emulation-Data-Output\10_CBPT\CBPT_avg_with_times.mat');
-
 outputpath      = 'R:\AG-Beste-Studien\Emulation\06_analysis\Emulation-Data-Output\11_DICS';
 
 %% Headmodel, MRI, leadfield
@@ -102,20 +95,20 @@ view([-90 0 0]);
 %% 
 
 % separate data frames for each contrast to be filled in parfor loop
-source_const_rand1_theta     = [];
-source_const_rand2_theta     = [];
-source_const_rand1_alpha     = [];
-source_const_rand2_alpha     = [];
-source_const_rand1_beta     = [];
-source_const_rand2_beta     = [];
+% not needed for B
+% source_const_rand1_theta     = [];
+% source_const_rand2_theta     = [];
+% source_const_rand1_alpha     = [];
+% source_const_rand2_alpha     = [];
+% source_const_rand1_beta     = [];
+% source_const_rand2_beta     = [];
+
+raw_data_all    = [];
+freq_data_all   = [];
+source_data_all = [];
 
 for frq = 1:size(freq_label, 2)
-    for contr = 1:size(contrasts_A, 2)
-    
-        % save significant time window in CBPT for this contrast
-        sig_window_start = CBPT_avg.A.(freq_label{frq}).([contrasts_A{contr}{1} '_' contrasts_A{contr}{2}]).first_sig;
-        sig_window_end = CBPT_avg.A.(freq_label{frq}).([contrasts_A{contr}{1} '_' contrasts_A{contr}{2}]).last_sig;
-    
+    for contr = 1:size(contrasts_B, 2)    
         for subj = 1:size(subjects, 2)
             try
             % save subject ID
@@ -127,14 +120,14 @@ for frq = 1:size(freq_label, 2)
             freq_data   = [];
             source_data = [];
     
-            for cond = 1:size(contrasts_A{contr}, 2)
+            for cond = 1:size(contrasts_B{contr}, 2)
     
-                this_cond = contrasts_A{contr}{cond};
+                this_cond = contrasts_B{contr}{cond};
     
                 % create file name from subject ID and condition and load
                 % respective file from the inputpath
                 this_filename   = [char(this_subj) '_' char(this_cond)];
-                temp_data       = load([inputpath_segmented_A filesep this_filename]);
+                temp_data       = load([inputpath_segmented_B filesep this_filename]);
                 temp_data       = temp_data.(this_cond);
                 temp_data.label = upper(temp_data.label);
     
@@ -147,7 +140,7 @@ for frq = 1:size(freq_label, 2)
                 cfg                     = [];
                 cfg.method              = 'mtmfft';
                 cfg.foilim              = freq_bands{frq};                           
-                cfg.tapsmofrq           = 1/(sig_window_end-sig_window_start); % time window = 3 s
+                cfg.tapsmofrq           = 1/(sig_window_end-sig_window_start); % time window = 2 s
                 cfg.taper               = 'hanning';
                 cfg.output              = 'powandcsd'; % power and cross-spectral density
                 cfg.pad                 = 'nextpow2';
@@ -158,19 +151,19 @@ for frq = 1:size(freq_label, 2)
     
             % append data for both conditions and calculate crossspectral
             % density
-            raw_data.([contrasts_A{contr}{1} '_' contrasts_A{contr}{2}]) = ft_appenddata([], ...
-                raw_data.(contrasts_A{contr}{1}), raw_data.(contrasts_A{contr}{2}));
+            raw_data.([contrasts_B{contr}{1} '_' contrasts_B{contr}{2}]) = ft_appenddata([], ...
+                raw_data.(contrasts_B{contr}{1}), raw_data.(contrasts_B{contr}{2}));
     
             cfg                     = [];
             cfg.method              = 'mtmfft';
             cfg.foilim              = freq_bands{frq};                           
-            cfg.tapsmofrq           = 1/(sig_window_end-sig_window_start); % time window = 3 s
+            cfg.tapsmofrq           = 1/(sig_window_end-sig_window_start); % time window = 2 s
             cfg.taper               = 'hanning';
             cfg.output              = 'powandcsd'; % power and cross-spectral density
             cfg.pad                 = 'nextpow2';
         
-            freq = ft_freqanalysis(cfg, raw_data.([contrasts_A{contr}{1} '_' contrasts_A{contr}{2}]));
-            freq_data.([contrasts_A{contr}{1} '_' contrasts_A{contr}{2}]) = freq;
+            freq = ft_freqanalysis(cfg, raw_data.([contrasts_B{contr}{1} '_' contrasts_B{contr}{2}]));
+            freq_data.([contrasts_B{contr}{1} '_' contrasts_B{contr}{2}]) = freq;
     
             % calculate common filter based on appended data (cross-spectral
             % density matrix)
@@ -189,38 +182,23 @@ for frq = 1:size(freq_label, 2)
             cfg.dics.reducerank     = 3;
             cfg.channel             = {'all'};
                      
-            source_common           = ft_sourceanalysis(cfg, freq_data.([contrasts_A{contr}{1} '_' contrasts_A{contr}{2}]));
+            source_common           = ft_sourceanalysis(cfg, freq_data.([contrasts_B{contr}{1} '_' contrasts_B{contr}{2}]));
             source_data.filter      = source_common;
     
             % set common filter in configuration
             cfg.sourcemodel.filter     = source_common.avg.filter;
             % apply common filter to both conditions
-            source_data.(contrasts_A{contr}{1}) = ft_sourceanalysis(cfg, freq_data.(contrasts_A{contr}{1}));
-            source_data.(contrasts_A{contr}{2}) = ft_sourceanalysis(cfg, freq_data.(contrasts_A{contr}{2}));
+            source_data.(contrasts_B{contr}{1}) = ft_sourceanalysis(cfg, freq_data.(contrasts_B{contr}{1}));
+            source_data.(contrasts_B{contr}{2}) = ft_sourceanalysis(cfg, freq_data.(contrasts_B{contr}{2}));
     
             % save data for this subject (source)
-            if frq == 1
-                if contr == 1
-                    source_const_rand1_theta{subj} = source_data;
-                elseif contr == 2
-                    source_const_rand2_theta{subj} = source_data;
-                end
+            % not separated for freqs and contrasts bc there is only one
+            % freq band and one contrast
 
-            elseif frq == 2
-                if contr == 1
-                    source_const_rand1_alpha{subj} = source_data;
-                elseif contr == 2
-                    source_const_rand2_alpha{subj} = source_data;
-                end
+            source_data_all{subj}   = source_data;
+            freq_data_all{subj}     = freq_data;
+            raw_data_all{subj}      = raw_data;
 
-            elseif frq == 3
-                if contr == 1
-                    source_const_rand1_beta{subj} = source_data;
-                elseif contr == 2
-                    source_const_rand2_beta{subj} = source_data;
-                end
-            end
-    
             catch 
                 disp([char('error for sbj ') num2str(subj)]);
                 continue
@@ -232,20 +210,6 @@ for frq = 1:size(freq_label, 2)
 
 end % freq loop
 
-
-source_data_all_theta = [];
-source_data_all_theta.const_rand1 = source_const_rand1_theta;
-source_data_all_theta.const_rand2 = source_const_rand2_theta;
-save([outputpath filesep 'source_data_all_theta'], "source_data_all_theta", '-v7.3');
-
-source_data_all_alpha = [];
-source_data_all_alpha.const_rand1 = source_const_rand1_alpha;
-source_data_all_alpha.const_rand2 = source_const_rand2_alpha;
-save([outputpath filesep 'source_data_all_alpha'], "source_data_all_alpha", '-v7.3');
-
-source_data_all_beta = [];
-source_data_all_beta.const_rand1 = source_const_rand1_beta;
-source_data_all_beta.const_rand2 = source_const_rand2_beta;
-save([outputpath filesep 'source_data_all_beta'], "source_data_all_beta", '-v7.3');
+save([outputpath filesep 'source_data_all_B_theta'], "source_data_all", '-v7.3');
 
 toc
