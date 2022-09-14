@@ -107,6 +107,8 @@ warning("on","all");
 
 FR = 60;
 SR = 250;
+INVALID_SAMP = 1:SR/2; % mark the  samples in the tracking data that 
+% contain artifactual errors
 
 % keep only subject ids that are also a field in track_data.
 
@@ -176,6 +178,8 @@ for s = 1:length(subj_ids)
             cur_traj = track_data(s).upsamp_data.(task_names{task})(t).traj_y;
             cur_purs = track_data(s).upsamp_data.(task_names{task})(t).purs_y;
             cur_err = abs(cur_traj - cur_purs);
+            cur_err = cur_err(INVALID_SAMP(end):end); % remove the samples 
+            % with artifactual errors. 
             cur_mean_err = mean(cur_err);
             track_data(s).upsamp_data.(task_names{task})(t).("error") = cur_err;
             track_data(s).upsamp_data.(task_names{task})(t).("mean_error") = cur_mean_err;
@@ -223,8 +227,6 @@ subj_ids = subj_ids(tmp_idx);
 
 
 % Deprecated: Put tracking and eeg data in same strucure
-% TODO: write them directly in a 3D Matrix instead of in fields inside a
-% structure
 % field_names = fieldnames(copy_data);
 % % nope, it does not seem to be possible to concatenate structures
 % % without a loop
@@ -242,14 +244,8 @@ subj_ids = subj_ids(tmp_idx);
 
 %% Insert Trial Start and End Events, Remove Practice Trials, Add Trial Number and Latency Fields
 % (Necessary cause Peaks are only given in Trial Latency)
-% TODO: The event field looks so terribly strange at this point. I wonder
-% who killed it. 
-size([eeg_struct(1).urevent.latency])
-size(unique([eeg_struct(1).urevent.latency]))
 
-
-
-%   "instruction":  10,
+%     "instruction":  10,
 %     "exp_start":    11,
 %     "fix":          12,
 %     "trial_start_L":13,
@@ -314,7 +310,6 @@ for s = 1:size(eeg_struct,2)
     event([start_pract(1):end_pract(1), start_pract(2):end_pract(2)]) = [];
 
     % insert end trial triggers
-
     last_trigger = "none";
 
     % loop through elements of event_types.
@@ -377,9 +372,6 @@ for s = 1:size(eeg_struct,2)
 
     % add new field: trial_latency
     tmp = num2cell(latencies);
-    % todo here: latencies set to 0 at beginnings of trials so I can use
-    % the findpeaks function to get the right timing
-    % probably requires a loop.
 
     % this syntax is confusing as hell. left hand side of the assignment needs
     % to be a vector, right hand side single outputs and matlab is happy...
@@ -509,6 +501,8 @@ for s = 1:size(eeg_struct,2)
                     event_cur_task(current_event_idx+1).trial_latency = current_trial_peak_latencies(idx);
                     event_cur_task(current_event_idx+1).trial_latency_ms = event_cur_task(current_event_idx+1).trial_latency/250*1000;
                     event_cur_task(current_event_idx+1).trial_number = t;
+                                        event_cur_task(current_event_idx+1).trial_number = t;
+
 %                     event_cur_task(current_event_idx+1).occlusion = occ_state;
 %                     event_cur_task(current_event_idx+1).constant = const_state;
 
@@ -625,7 +619,7 @@ for s = 1:size(eeg_struct,2)
 %                     event_cur_task(current_event_idx+1).occlusion = occ_state;
 %                     event_cur_task(current_event_idx+1).constant = const_state;
 
-                    % in order to separate the peaks in the
+% in order to separate the peaks in the
 %                     conditions, I need to add a field that labels each
 %                     peak as either having happened while the trajectory
 %                     was occluded or while it was visible. TODO.
@@ -633,8 +627,11 @@ for s = 1:size(eeg_struct,2)
 % independent variable under edit deisgn DONE.
 % additional thought: It might also make sense to add the error for each
 % epoch in the event structure as a continuous variable  DONE
-
                 end
+                % locate current trial in eeg event
+                cur_trial_idx = find([event_cur_task.trial_number] == t);
+                % add field: Invalid error samples
+                event_cur_task = add_artifact_event(event_cur_task, cur_trial_idx, INVALID_SAMP)
             end
             % copy the event structure into a temporary field in eeg_struct
             eeg_struct(s).(task_names{task}) =  event_cur_task;

@@ -15,6 +15,9 @@ clc
 
 %% Define Paths
 
+% TODO: Subject 03 something s =1 does neither have a pursuit latency nor
+% an artifact_error field. WHY?!
+
 eeglab;
 close;
 
@@ -97,28 +100,32 @@ for s = 1:length(ALLEEG)
         epoch_trial = EEG.event(peak_idx).trial_number;
         % do all this only if we are dealing with a valid trial
         if epoch_trial ~= 9999
-            % get latency inside trial
-            epoch_trial_latency = EEG.event(peak_idx).trial_latency;
+            % and if the epoch is not within the first half a second of a
+            % trial
+            if strcmp(EEG.event(peak_idx).artifact_error, 'VALID')
+                % get latency inside trial
+                epoch_trial_latency = EEG.event(peak_idx).trial_latency;
 
-            % calculate error in epoch
-            %  get current error
-            cur_error = abs(track_data(s).upsamp_data.(epoch_task)(epoch_trial).error);
-            epoch_start = epoch_trial_latency+epoch_lims(1);
-            epoch_end = epoch_trial_latency+epoch_lims(2);
-            % account for first and last epochs
-            if epoch_start < 1
-                epoch_start = 1;
-            end
-            if epoch_end > length(cur_error)
-                epoch_end = length(cur_error);
-            end
-            error_of_epoch = cur_error(epoch_start:epoch_end);
-            % work on event field
-            % get event fields that belong to epoch
-            epoch_idx = find([EEG.event.epoch] == ep);
-            % put error in epoch in event field
-            for srow = 1:length(epoch_idx)
-                EEG.event(epoch_idx(srow)).('epoch_error') = mean(error_of_epoch, 'omitnan');
+                % calculate error in epoch
+                %  get current error
+                cur_error = abs(track_data(s).upsamp_data.(epoch_task)(epoch_trial).error);
+                epoch_start = epoch_trial_latency+epoch_lims(1);
+                epoch_end = epoch_trial_latency+epoch_lims(2);
+                % account for first and last epochs
+                if epoch_start < 1
+                    epoch_start = 1;
+                end
+                if epoch_end > length(cur_error)
+                    epoch_end = length(cur_error);
+                end
+                error_of_epoch = cur_error(epoch_start:epoch_end);
+                % work on event field
+                % get event fields that belong to epoch
+                epoch_idx = find([EEG.event.epoch] == ep);
+                % put error in epoch in event field
+                for srow = 1:length(epoch_idx)
+                    EEG.event(epoch_idx(srow)).('epoch_error') = mean(error_of_epoch, 'omitnan');
+                end
             end
         end
 
@@ -140,6 +147,7 @@ eeglab redraw
 % if no, count one plus and skip to next event
 % count how many trajectory peaks had no following pursuit peak.
 no_purs = 0;
+purs_count = 0;
 
 for s = 1:length(ALLEEG)
     % get plus / minus latencies around peaks
@@ -177,53 +185,70 @@ for s = 1:length(ALLEEG)
         % do all this only if we are dealing with a valid trial
         idx_in_trial = find(EEG.epoch(ep).event == peak_idx);
         if epoch_trial ~= 9999
-            % get latency inside trial
-            epoch_trial_latency = EEG.event(peak_idx).trial_latency;
-            peak_type = EEG.epoch(ep).eventtype(idx_in_trial);
-            % calculate latency to next pursuit peak
-            % is there a pursuit peak in the same direction in the epoch?
-            all_events = EEG.epoch(ep).eventtype;
-            % positive peaks...
-            if strcmp(peak_type, 'S 40')
-                purs_peak_idx = find(strcmp(all_events, 'S 41'));
-                % if there is a pursuit peak in the same direction and it
-                % is after the trajectory peak...
-                if ~isempty(purs_peak_idx) && any(purs_peak_idx > idx_in_trial)
-                    % if there are multiple pursuit peaks, keep only the first one
-                    % after the peak
-                    if length(purs_peak_idx) > 1
-                        purs_peak_idx = purs_peak_idx(min(find(purs_peak_idx > idx_in_trial)));
-                    end
-                    purs_lat = EEG.epoch(ep).eventlatency{purs_peak_idx};
-                else
-                    no_purs = no_purs + 1;
-                    purs_lat = [];
-                end
-            % negative peaks...
-            elseif strcmp(peak_type, 'S 50')
-                purs_peak_idx = find(strcmp(all_events, 'S 51'));
-                % if there is a pursuit peak in the same direction and it
-                % is after the trajectory peak...
-                if ~isempty(purs_peak_idx) && any(purs_peak_idx > idx_in_trial)
-                    % if there are multiple pursuit peaks, keep only the first one
-                    % after the peak
-                    if length(purs_peak_idx) > 1
-                        purs_peak_idx = purs_peak_idx(min(find(purs_peak_idx > idx_in_trial)));
-                    end
+            % and if the epoch is not within the first half a second of a
+            % trial
+            if strcmp(EEG.event(peak_idx).artifact_error, 'VALID')
+                % get latency inside trial
+                epoch_trial_latency = EEG.event(peak_idx).trial_latency;
+                peak_type = EEG.epoch(ep).eventtype(idx_in_trial);
+                % calculate latency to next pursuit peak
+                % is there a pursuit peak in the same direction in the epoch?
+                all_events = EEG.epoch(ep).eventtype;
+                % positive peaks...
+                if strcmp(peak_type, 'S 40')
+                    purs_peak_idx = find(strcmp(all_events, 'S 41'));
+                    % if there is a pursuit peak in the same direction and it
+                    % is after the trajectory peak...
+                    if ~isempty(purs_peak_idx) && any(purs_peak_idx > idx_in_trial)
+                        % if there are multiple pursuit peaks, keep only the first one
+                        % after the peak
+                        if length(purs_peak_idx) > 1
+                            purs_peak_idx = purs_peak_idx(min(find(purs_peak_idx > idx_in_trial)));
+                        end
+                        % purs latency in ms
                         purs_lat = EEG.epoch(ep).eventlatency{purs_peak_idx};
+                        purs_count = purs_count + 1;
+                    else
+                        no_purs = no_purs + 1;
+                        purs_lat = [];
+                    end
+                    % negative peaks...
+                elseif strcmp(peak_type, 'S 50')
+                    purs_peak_idx = find(strcmp(all_events, 'S 51'));
+                    % if there is a pursuit peak in the same direction and it
+                    % is after the trajectory peak...
+                    if ~isempty(purs_peak_idx) && any(purs_peak_idx > idx_in_trial)
+                        % if there are multiple pursuit peaks, keep only the first one
+                        % after the peak
+                        if length(purs_peak_idx) > 1
+                            purs_peak_idx = purs_peak_idx(min(find(purs_peak_idx > idx_in_trial)));
+                        end
+                        % purs latency in ms
+                        purs_lat = EEG.epoch(ep).eventlatency{purs_peak_idx};
+                        purs_count = purs_count + 1;
                     else
                         no_purs = no_purs + 1;
                         purs_lat = [];
                     end
                 else
                     error('There is no peak at latency 0 of the epoch')
-            end
-            % work on event field
-            % get event fields that belong to epoch
-            epoch_idx = find([EEG.event.epoch] == ep);
-            % put latency of pursuit in epoch in event field
-            for srow = 1:length(epoch_idx)
-                EEG.event(epoch_idx(srow)).('pursuit_lat') = purs_lat;
+                end
+                % work on event field
+                % get event fields that belong to epoch
+                epoch_idx = find([EEG.event.epoch] == ep);
+                % keep only latencies in a sensible range (80 ms to 500 ms)
+                if ~isempty(purs_lat) && purs_lat > 80 && purs_lat < 500
+                    % put latency of pursuit in epoch in event field
+                    for srow = 1:length(epoch_idx)
+                        EEG.event(epoch_idx(srow)).('pursuit_lat') = purs_lat;
+                    end
+                else
+                    for srow = 1:length(epoch_idx)
+                        EEG.event(epoch_idx(srow)).('pursuit_lat') = [];
+                    end
+                    no_purs = no_purs + 1;
+                    purs_count = purs_count - 1;
+                end
             end
         end
 
@@ -236,8 +261,33 @@ end
 
 eeglab redraw
 
-% at this time, 16817 trajectory peaks are not followed by a pursuit peak
-% criteria: 
+
+%% Check what the pursuit latencies look like
+
+% criteria:
 % - pursuit peak with prominence = 0.05
 % - a pursuit peak must follow the trajectory peak in the same epoch
 % - pursuit and trajectory peaks must go in the same direction (up or down)
+% - pursuit peak latency is between 80 and 500 ms. 
+% - central peak of the epoch is not in the first half a second of a trial
+
+no_purs/((purs_count+no_purs)/100)
+% at this time, 31472 out of 65627 trajectory peaks are not followed by a 
+% pursuit peak (47.96%)
+pursuit_lats = [];
+all_pursuit_lats = [];
+for s = 1:length(ALLEEG)
+    pursuit_lats = [ALLEEG(s).event.pursuit_lat];
+    all_pursuit_lats = [all_pursuit_lats, pursuit_lats];
+end
+% keep only one of the copies of the pursuit latency field values each. 
+unique_lats_idx = find(diff(all_pursuit_lats));
+all_pursuit_lats_unique = all_pursuit_lats(unique_lats_idx);
+
+plot(sort(all_pursuit_lats_unique))
+histogram(all_pursuit_lats_unique)
+mink(all_pursuit_lats_unique, 100)
+% purs_count and length(all_pursuit_lats_unique) do not have the same size.
+% which is odd. 
+
+

@@ -181,62 +181,67 @@ count_peaks.rand2 = 0;
 for s = 1:size(ALLEEG, 2)
 
     EEG = ALLEEG(s);
+    % remove epochs in artifactual area of each trial
+    valid_idx = [EEG.event(find(strcmp({EEG.event.artifact_error}, 'VALID'))).epoch];
+    unique_valid = unique(valid_idx);
     % all conditions
-    mean_struct.all(:,:,s) = mean(EEG.CSD_data,3);
+    mean_struct.all(:,:,s) = mean(EEG.CSD_data(:,:,unique_valid),3);
     % get number of epochs per subject for weighting
-    z_mean_struct.num_epochs_all(s) = size(EEG.CSD_data, 3);
+    z_mean_struct.num_epochs_all(s) = size(EEG.CSD_data(:,:,unique_valid), 3);
     % z-normalized data
     z_mean_struct.all(:, :, s) = normalize(mean_struct.all(:, :, s),2, 'zscore');
     % get indices of peaks in event structure that also belong to a certain
     % condition
-    occl_off_log = false(size(EEG.event,2),1);
-    occl_on_log = false(size(EEG.event,2),1);
-    traj_rand1_log = false(size(EEG.event,2),1);
-    traj_const_log = false(size(EEG.event,2),1);
-    traj_rand2_log = false(size(EEG.event,2),1);
+%     occl_off_log = false(size(EEG.event,2),1);
+%     occl_on_log = false(size(EEG.event,2),1);
+%     traj_rand1_log = false(size(EEG.event,2),1);
+%     traj_const_log = false(size(EEG.event,2),1);
+%     traj_rand2_log = false(size(EEG.event,2),1);
 
-    for ev = 1:size(EEG.event,2)
-        % occlusion
-        occl_off_log(ev) = strcmp(EEG.event(ev).type, 'S 40') && strcmp(EEG.event(ev).OCCL, 'OFF');
-        occl_on_log(ev) = strcmp(EEG.event(ev).type, 'S 40') && strcmp(EEG.event(ev).OCCL, 'ON');
-        % constant
-        traj_rand1_log(ev) = strcmp(EEG.event(ev).type, 'S 40') && strcmp(EEG.event(ev).TRAJ, 'RANDOM1');
-        traj_const_log(ev) = strcmp(EEG.event(ev).type, 'S 40') && strcmp(EEG.event(ev).TRAJ, 'CONST');
-        traj_rand2_log(ev) = strcmp(EEG.event(ev).type, 'S 40') && strcmp(EEG.event(ev).TRAJ, 'RANDOM2');
-    end
+    % TODO: This does not yet take into account the new S 50 peaks and the
+    % ARTIFACT_ERROR field. 
+%     for ev = 1:size(EEG.event,2)
+%         % occlusion
+%         occl_off_log(ev) = strcmp(EEG.event(ev).type, 'S 40') && strcmp(EEG.event(ev).OCCL, 'OFF');
+%         occl_on_log(ev) = strcmp(EEG.event(ev).type, 'S 40') && strcmp(EEG.event(ev).OCCL, 'ON');
+%         % constant
+%         traj_rand1_log(ev) = strcmp(EEG.event(ev).type, 'S 40') && strcmp(EEG.event(ev).TRAJ, 'RANDOM1');
+%         traj_const_log(ev) = strcmp(EEG.event(ev).type, 'S 40') && strcmp(EEG.event(ev).TRAJ, 'CONST');
+%         traj_rand2_log(ev) = strcmp(EEG.event(ev).type, 'S 40') && strcmp(EEG.event(ev).TRAJ, 'RANDOM2');
+%     end
 
     % get epoch numbers for respective conditions
-    cond_ind(s).epoch_vis = unique([EEG.event(occl_off_log).epoch]);
-    cond_ind(s).epoch_occ = unique([EEG.event(occl_on_log).epoch]);
-    cond_ind(s).epoch_rand1 = unique([EEG.event(traj_rand1_log).epoch]);
-    cond_ind(s).epoch_const = unique([EEG.event(traj_const_log).epoch]);
-    cond_ind(s).epoch_rand2 = unique([EEG.event(traj_rand2_log).epoch]);
-
-    % calculate mean across condition
-    mean_struct.occ_off(:,:,s) = mean(EEG.CSD_data(:,:,cond_ind(s).epoch_vis),3);
-    mean_struct.occ_on(:,:,s) = mean(EEG.CSD_data(:,:,cond_ind(s).epoch_occ),3);
-    mean_struct.rand1(:,:,s) = mean(EEG.CSD_data(:,:,cond_ind(s).epoch_rand1),3);
-    mean_struct.const(:,:,s) = mean(EEG.CSD_data(:,:,cond_ind(s).epoch_const),3);
-    mean_struct.rand2(:,:,s) = mean(EEG.CSD_data(:,:,cond_ind(s).epoch_rand2),3);
-
-    % get z-normalized data
-    z_mean_struct.occ_off(:, :, s) = normalize(mean_struct.occ_off(:, :, s),2, 'zscore');
-    z_mean_struct.occ_on(:, :, s) = normalize(mean_struct.occ_on(:, :, s),2, 'zscore');
-    z_mean_struct.rand1(:, :, s) = normalize(mean_struct.rand1(:, :, s),2, 'zscore');
-    z_mean_struct.const(:, :, s) = normalize(mean_struct.const(:, :, s),2, 'zscore');
-    z_mean_struct.rand2(:, :, s) = normalize(mean_struct.rand2(:, :, s),2, 'zscore');
-
-    % get weights
-    z_mean_struct.num_epochs_occ_off(s) = size(EEG.data(:,:,cond_ind(s).epoch_vis), 3);
-    z_mean_struct.num_epochs_occ_on(s) = size(EEG.data(:,:,cond_ind(s).epoch_occ), 3);
-    z_mean_struct.num_epochs_rand1(s) = size(EEG.data(:,:,cond_ind(s).epoch_rand1), 3);
-    z_mean_struct.num_epochs_const(s) = size(EEG.data(:,:,cond_ind(s).epoch_const), 3);
-    z_mean_struct.num_epochs_rand2(s) = size(EEG.data(:,:,cond_ind(s).epoch_rand2), 3);
-
-    % calculate contrasts by simple subtraction
-    mean_struct.diff_occ = mean_struct.occ_off(:,:,s) - mean_struct.occ_on(:,:,s);
-    mean_struct.diff_const_rand1 = mean_struct.const(:,:,s) - mean_struct.rand1(:,:,s);
-    mean_struct.diff_const_rand2 = mean_struct.const(:,:,s) - mean_struct.rand2(:,:,s);
+%     cond_ind(s).epoch_vis = unique([EEG.event(occl_off_log).epoch]);
+%     cond_ind(s).epoch_occ = unique([EEG.event(occl_on_log).epoch]);
+%     cond_ind(s).epoch_rand1 = unique([EEG.event(traj_rand1_log).epoch]);
+%     cond_ind(s).epoch_const = unique([EEG.event(traj_const_log).epoch]);
+%     cond_ind(s).epoch_rand2 = unique([EEG.event(traj_rand2_log).epoch]);
+% 
+%     % calculate mean across condition
+%     mean_struct.occ_off(:,:,s) = mean(EEG.CSD_data(:,:,cond_ind(s).epoch_vis),3);
+%     mean_struct.occ_on(:,:,s) = mean(EEG.CSD_data(:,:,cond_ind(s).epoch_occ),3);
+%     mean_struct.rand1(:,:,s) = mean(EEG.CSD_data(:,:,cond_ind(s).epoch_rand1),3);
+%     mean_struct.const(:,:,s) = mean(EEG.CSD_data(:,:,cond_ind(s).epoch_const),3);
+%     mean_struct.rand2(:,:,s) = mean(EEG.CSD_data(:,:,cond_ind(s).epoch_rand2),3);
+% 
+%     % get z-normalized data
+%     z_mean_struct.occ_off(:, :, s) = normalize(mean_struct.occ_off(:, :, s),2, 'zscore');
+%     z_mean_struct.occ_on(:, :, s) = normalize(mean_struct.occ_on(:, :, s),2, 'zscore');
+%     z_mean_struct.rand1(:, :, s) = normalize(mean_struct.rand1(:, :, s),2, 'zscore');
+%     z_mean_struct.const(:, :, s) = normalize(mean_struct.const(:, :, s),2, 'zscore');
+%     z_mean_struct.rand2(:, :, s) = normalize(mean_struct.rand2(:, :, s),2, 'zscore');
+% 
+%     % get weights
+%     z_mean_struct.num_epochs_occ_off(s) = size(EEG.data(:,:,cond_ind(s).epoch_vis), 3);
+%     z_mean_struct.num_epochs_occ_on(s) = size(EEG.data(:,:,cond_ind(s).epoch_occ), 3);
+%     z_mean_struct.num_epochs_rand1(s) = size(EEG.data(:,:,cond_ind(s).epoch_rand1), 3);
+%     z_mean_struct.num_epochs_const(s) = size(EEG.data(:,:,cond_ind(s).epoch_const), 3);
+%     z_mean_struct.num_epochs_rand2(s) = size(EEG.data(:,:,cond_ind(s).epoch_rand2), 3);
+% 
+%     % calculate contrasts by simple subtraction
+%     mean_struct.diff_occ = mean_struct.occ_off(:,:,s) - mean_struct.occ_on(:,:,s);
+%     mean_struct.diff_const_rand1 = mean_struct.const(:,:,s) - mean_struct.rand1(:,:,s);
+%     mean_struct.diff_const_rand2 = mean_struct.const(:,:,s) - mean_struct.rand2(:,:,s);
 
     % get time vec
     mean_struct.time_vec = EEG.times;
@@ -245,30 +250,30 @@ for s = 1:size(ALLEEG, 2)
 
     % add peaks to know how much power each condition has
     count_peaks.all = size(EEG.CSD_data, 3) + count_peaks.all;
-    count_peaks.occ = size(EEG.CSD_data(:,:,cond_ind(s).epoch_occ), 3) + count_peaks.occ;
-    count_peaks.vis = size(EEG.CSD_data(:,:,cond_ind(s).epoch_vis), 3) + count_peaks.vis;
-    count_peaks.rand1 = size(EEG.CSD_data(:,:,cond_ind(s).epoch_rand1), 3) + count_peaks.rand1;
-    count_peaks.const = size(EEG.CSD_data(:,:,cond_ind(s).epoch_const), 3) + count_peaks.const;
-    count_peaks.rand2 = size(EEG.CSD_data(:,:,cond_ind(s).epoch_rand2), 3) + count_peaks.rand2;
+%     count_peaks.occ = size(EEG.CSD_data(:,:,cond_ind(s).epoch_occ), 3) + count_peaks.occ;
+%     count_peaks.vis = size(EEG.CSD_data(:,:,cond_ind(s).epoch_vis), 3) + count_peaks.vis;
+%     count_peaks.rand1 = size(EEG.CSD_data(:,:,cond_ind(s).epoch_rand1), 3) + count_peaks.rand1;
+%     count_peaks.const = size(EEG.CSD_data(:,:,cond_ind(s).epoch_const), 3) + count_peaks.const;
+%     count_peaks.rand2 = size(EEG.CSD_data(:,:,cond_ind(s).epoch_rand2), 3) + count_peaks.rand2;
 
 end
 
 epoch_weights = z_mean_struct.num_epochs_all/mean(z_mean_struct.num_epochs_all);
-epoch_weights_occ_on = z_mean_struct.num_epochs_all/mean(z_mean_struct.num_epochs_occ_on);
-epoch_weights_occ_off = z_mean_struct.num_epochs_all/mean(z_mean_struct.num_epochs_occ_off);
-epoch_weights_rand1 = z_mean_struct.num_epochs_all/mean(z_mean_struct.num_epochs_rand1);
-epoch_weights_const = z_mean_struct.num_epochs_all/mean(z_mean_struct.num_epochs_const);
-epoch_weights_rand2 = z_mean_struct.num_epochs_all/mean(z_mean_struct.num_epochs_rand2);
+% epoch_weights_occ_on = z_mean_struct.num_epochs_all/mean(z_mean_struct.num_epochs_occ_on);
+% epoch_weights_occ_off = z_mean_struct.num_epochs_all/mean(z_mean_struct.num_epochs_occ_off);
+% epoch_weights_rand1 = z_mean_struct.num_epochs_all/mean(z_mean_struct.num_epochs_rand1);
+% epoch_weights_const = z_mean_struct.num_epochs_all/mean(z_mean_struct.num_epochs_const);
+% epoch_weights_rand2 = z_mean_struct.num_epochs_all/mean(z_mean_struct.num_epochs_rand2);
 
 
 for ep = 1:size(z_mean_struct.all, 3)
 
     z_mean_struct.all(:,:,ep) = z_mean_struct.all(:,:,ep) * epoch_weights(ep);
-    z_mean_struct.occ_on(:,:,ep) = z_mean_struct.occ_on(:,:,ep) * epoch_weights_occ_on(ep);
-    z_mean_struct.occ_off(:,:,ep) = z_mean_struct.occ_off(:,:,ep) * epoch_weights_occ_off(ep);
-    z_mean_struct.rand1(:,:,ep) = z_mean_struct.rand1(:,:,ep) * epoch_weights_rand1(ep);
-    z_mean_struct.const(:,:,ep) = z_mean_struct.const(:,:,ep) * epoch_weights_const(ep);
-    z_mean_struct.rand2(:,:,ep) = z_mean_struct.rand2(:,:,ep) * epoch_weights_rand2(ep);
+%     z_mean_struct.occ_on(:,:,ep) = z_mean_struct.occ_on(:,:,ep) * epoch_weights_occ_on(ep);
+%     z_mean_struct.occ_off(:,:,ep) = z_mean_struct.occ_off(:,:,ep) * epoch_weights_occ_off(ep);
+%     z_mean_struct.rand1(:,:,ep) = z_mean_struct.rand1(:,:,ep) * epoch_weights_rand1(ep);
+%     z_mean_struct.const(:,:,ep) = z_mean_struct.const(:,:,ep) * epoch_weights_const(ep);
+%     z_mean_struct.rand2(:,:,ep) = z_mean_struct.rand2(:,:,ep) * epoch_weights_rand2(ep);
 
 end
 
@@ -277,7 +282,7 @@ end
 
 cd(mean_matrices_peaks_epoched_path)
 save("mean_struct_csd.mat", 'mean_struct')
-save("condition_indices_csd.mat", 'cond_ind')
+% save("condition_indices_csd.mat", 'cond_ind')
 save("count_peaks_csd.mat", 'count_peaks')
 save("z_mean_struct_csd.mat", 'z_mean_struct')
 
@@ -291,12 +296,12 @@ load('z_mean_struct_csd.mat')
 avg_peak_dist = 300;
 % average across subjects
 z_epoch_mean_all = mean(z_mean_struct.all,3);
-z_epoch_mean_occ = mean(z_mean_struct.occ_on,3, 'omitnan'); % omitnan is
-% % necessary because subject 18 has no task B
-z_epoch_mean_vis = mean(z_mean_struct.occ_off,3);
-z_epoch_mean_rand1 = mean(z_mean_struct.rand1,3);
-z_epoch_mean_const = mean(z_mean_struct.const,3);
-z_epoch_mean_rand2 = mean(z_mean_struct.rand2,3);
+% z_epoch_mean_occ = mean(z_mean_struct.occ_on,3, 'omitnan'); % omitnan is
+% % % necessary because subject 18 has no task B
+% z_epoch_mean_vis = mean(z_mean_struct.occ_off,3);
+% z_epoch_mean_rand1 = mean(z_mean_struct.rand1,3);
+% z_epoch_mean_const = mean(z_mean_struct.const,3);
+% z_epoch_mean_rand2 = mean(z_mean_struct.rand2,3);
 
 % specify parameters for topoplotting
 base_dur = 500;
@@ -314,11 +319,11 @@ for i = 1:length(latencies_onset)
     [~, lat_idx_onset] = min(abs(z_mean_struct.time_vec - latencies_onset(i)));
     [~, lat_idx_offset] = min(abs(z_mean_struct.time_vec - latencies_offset(i)));
     topo_struct.all(:, i) = mean(z_epoch_mean_all(:,lat_idx_onset:lat_idx_offset), 2);
-    topo_struct.vis(:, i) = mean(z_epoch_mean_vis(:,lat_idx_onset:lat_idx_offset), 2);
-    topo_struct.occ(:, i) = mean(z_epoch_mean_occ(:,lat_idx_onset:lat_idx_offset), 2);
-    topo_struct.const(:, i) = mean(z_epoch_mean_const(:,lat_idx_onset:lat_idx_offset), 2);
-    topo_struct.rand1(:, i) = mean(z_epoch_mean_rand1(:,lat_idx_onset:lat_idx_offset), 2);
-    topo_struct.rand2(:, i) = mean(z_epoch_mean_rand2(:,lat_idx_onset:lat_idx_offset), 2);
+%     topo_struct.vis(:, i) = mean(z_epoch_mean_vis(:,lat_idx_onset:lat_idx_offset), 2);
+%     topo_struct.occ(:, i) = mean(z_epoch_mean_occ(:,lat_idx_onset:lat_idx_offset), 2);
+%     topo_struct.const(:, i) = mean(z_epoch_mean_const(:,lat_idx_onset:lat_idx_offset), 2);
+%     topo_struct.rand1(:, i) = mean(z_epoch_mean_rand1(:,lat_idx_onset:lat_idx_offset), 2);
+%     topo_struct.rand2(:, i) = mean(z_epoch_mean_rand2(:,lat_idx_onset:lat_idx_offset), 2);
 %     topo_struct.diff_occ(:, i) = mean(z_mean_struct.diff_occ(:,lat_idx_onset:lat_idx_offset), 2);
 %     topo_struct.diff_const_rand1(:, i) = mean(z_mean_struct.diff_const_rand1(:,lat_idx_onset:lat_idx_offset), 2);
 %     topo_struct.diff_const_rand2(:, i) = mean(z_mean_struct.diff_const_rand2(:,lat_idx_onset:lat_idx_offset), 2);
@@ -361,22 +366,22 @@ load('mean_struct_csd.mat')
 avg_peak_dist = 300;
 % average across subjects
 epoch_mean_all = mean(mean_struct.all,3);
-epoch_mean_occ = mean(mean_struct.occ_on,3, 'omitnan'); % omitnan is
-% % necessary because subject 18 has no task B
-epoch_mean_vis = mean(mean_struct.occ_off,3);
-epoch_mean_rand1 = mean(mean_struct.rand1,3);
-epoch_mean_const = mean(mean_struct.const,3);
-epoch_mean_rand2 = mean(mean_struct.rand2,3);
+% epoch_mean_occ = mean(mean_struct.occ_on,3, 'omitnan'); % omitnan is
+% % % necessary because subject 18 has no task B
+% epoch_mean_vis = mean(mean_struct.occ_off,3);
+% epoch_mean_rand1 = mean(mean_struct.rand1,3);
+% epoch_mean_const = mean(mean_struct.const,3);
+% epoch_mean_rand2 = mean(mean_struct.rand2,3);
 
 load('z_mean_struct_csd.mat')
 
 % get z-weighted mean for all subjects
 z_epoch_mean_all = mean(z_mean_struct.all,3);
-z_epoch_mean_occ_on = mean(z_mean_struct.occ_on,3, 'omitnan');
-z_epoch_mean_occ_off = mean(z_mean_struct.occ_off,3, 'omitnan');
-z_epoch_mean_rand1 = mean(z_mean_struct.rand1,3);
-z_epoch_mean_const = mean(z_mean_struct.const,3);
-z_epoch_mean_rand2 = mean(z_mean_struct.rand2,3);
+% z_epoch_mean_occ_on = mean(z_mean_struct.occ_on,3, 'omitnan');
+% z_epoch_mean_occ_off = mean(z_mean_struct.occ_off,3, 'omitnan');
+% z_epoch_mean_rand1 = mean(z_mean_struct.rand1,3);
+% z_epoch_mean_const = mean(z_mean_struct.const,3);
+% z_epoch_mean_rand2 = mean(z_mean_struct.rand2,3);
 
 base_dur = 500;
 
@@ -393,7 +398,6 @@ subtitle_string = strcat(['all channels']);
 
 %% Plot ERPs as grand average and save plots
 
-
 cd(peak_erp_plots_dir)
 
 % Average ERP Plots
@@ -406,7 +410,7 @@ cd(peak_erp_plots_dir)
 % Average ERP Plots of z-score
 
 figure()
-[~, min_ind] = plot_ERP(z_epoch_mean_all, mean_struct.time_vec, base_dur, title_string_z, subtitle_string);
+[~, min_ind] = plot_ERP(z_epoch_mean_all, z_mean_struct.time_vec, base_dur, title_string_z, subtitle_string);
 savefig('all_condition_peaks_erp_z_csd')
 
 
@@ -500,22 +504,31 @@ sgtitle(strjoin(['epochs around peaks all subjects all trials, elec ', chan_lab_
 
 savefig('all_condition_peaks_max_240-270_topo_single_csd_z')
 
+
 %% ERP image
 
-% put all epochs of all subjects in one dataset
-% initialize dataset
-% TODO: Current Bugs: Subject 1 does not yet have a pursuit latency field
-% TODO: Last Subject has no negative peaks (only S40) and no pursuit peaks
 clear z_ALLEEG TMPEEG z_mean_struct mean_struct
 sum(arrayfun(@(s) length(s.epoch), ALLEEG)) % how many epochs we need. 
-TMPEEG = ALLEEG(2);
+% remove all epochs with artifactual errors
+ALLEEG(1:2) = [];
+for s = 1:length(ALLEEG)
+    EEG = ALLEEG(s);
+    EEG = pop_selectevent( EEG, 'artifact_error',{'VALID'},'deleteevents',...
+        'off','deleteepochs','on','invertepochs','off')
+    ALLEEG(s) = EEG;
+end
+% initialize dataset
 
+TMPEEG = ALLEEG(1);
+
+% put all epochs of all subjects in one dataset
 % get all data and all event structures
-for s = 1:length(ALLEEG)-2
+for s = 3:length(ALLEEG)
     % normalize each subjects' data
-    z_tmpEEG = ALLEEG(s+1);
+    z_tmpEEG = ALLEEG(s);
     % normalize data
-    z_tmpEEG.data = normalize(ALLEEG(s+1).data,2, 'zscore');
+    z_tmpEEG.data = [];
+    z_tmpEEG.data = normalize(ALLEEG(s).data,2, 'zscore');
     % get location where new data should go
     data_idx = size(TMPEEG.data, 3)+1:size(TMPEEG.data, 3)+size(z_tmpEEG.data, 3);
     % concatenate subject data in one dataset
@@ -537,7 +550,7 @@ end
 TMPEEG.trials = length(TMPEEG.epoch)
 
 % actual erp image parameters
-chan_lab = 'F1';
+chan_lab = 'Cz';
 chan_no = find(strcmp({TMPEEG.chanlocs.labels}, chan_lab));
 plot_type = 1; % 1 = channel, 0 = component
 project_channel = [[]];
