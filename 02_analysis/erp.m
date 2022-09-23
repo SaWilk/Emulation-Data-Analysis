@@ -81,6 +81,9 @@ clear ALLEEG2
 
 %% Calculate Means Across Subjects
 
+% TODO: THIS WHOLE SECTION NEEDS TO GET COPIED AND ADJUSTED FROM THE
+% csd_transform SCRIPT! VERY OUTDATED!
+
 count_peaks.all = 0;
 count_peaks.occ = 0;
 count_peaks.vis = 0;
