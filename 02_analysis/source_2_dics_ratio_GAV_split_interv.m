@@ -133,7 +133,7 @@ for intrv = 1:size(interval_labels_A, 2)
     end % freq loop
 end % interval loop
 
-%save([datapath filesep 'source_ratio_all_avg' output_suffix], "source_ratio_all_avg", '-v7.3');
+save([datapath filesep 'source_ratio_all_avg' output_suffix], "source_ratio_all_avg", '-v7.3');
 
 %% interpolate data on MRI and save
 
@@ -157,7 +157,7 @@ for intrv = 1:size(interval_labels_A, 2)
 end % interval loop
 
 % save interpolated data
-%save([datapath filesep 'source_ratio_avg_int' output_suffix], "source_ratio_avg_int", '-v7.3');
+save([datapath filesep 'source_ratio_avg_int' output_suffix], "source_ratio_avg_int", '-v7.3');
 
 %% plotting
 
