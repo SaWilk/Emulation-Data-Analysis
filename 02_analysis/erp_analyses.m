@@ -72,9 +72,20 @@ load('mean_struct_csd.mat')
 load("condition_indices_csd.mat")
 mean_struct = renameStructField(mean_struct, 'diff_occ', 'diff_vis_occ');
 z_mean_struct = renameStructField(z_mean_struct, 'diff_occ', 'diff_vis_occ');
+% remove everything reminding of random2
+z_mean_struct = rmfield(z_mean_struct, 'rand2');
+z_mean_struct = rmfield(z_mean_struct, 'diff_rand1_rand2');
+z_mean_struct = rmfield(z_mean_struct, 'diff_const_rand2');
+z_mean_struct = rmfield(z_mean_struct, 'num_epochs_rand2');
+mean_struct = rmfield(mean_struct, 'rand2');
+mean_struct = rmfield(mean_struct, 'diff_rand1_rand2');
+mean_struct = rmfield(mean_struct, 'diff_const_rand2');
+mean_struct = rmfield(mean_struct, 'num_epochs_rand2');
 
-cond_labs = {'all', 'occ', 'vis', 'rand1', 'const', 'rand2', 'diff_vis_occ', ...
-    'diff_const_rand1', 'diff_const_rand2', 'diff_rand1_rand2'};
+% cond_labs = {'all', 'occ', 'vis', 'rand1', 'const', 'rand2', 'diff_vis_occ', ...
+%     'diff_const_rand1', 'diff_const_rand2', 'diff_rand1_rand2'};
+cond_labs = {'all', 'occ', 'vis', 'rand1', 'const', 'diff_vis_occ', ...
+    'diff_const_rand1'};
 
 avg_peak_dist = 300;
 % average across subjects
@@ -131,18 +142,22 @@ cd(peak_erp_plots_dir)
 
 for lab = 1:length(cond_labs)
     figure(lab)
-        for i = 1:length(latencies_onset)
+    for i = 1:length(latencies_onset)
 
         subplot(topo_rows, topo_cols, i)
         topoplot(topo_struct.(cond_labs{lab})(:, i), chan_locs, 'maplimits',  zlims_all)
         title(strcat(['average of ', num2str(latencies_onset(i)), ' to ', ...
             num2str(latencies_offset(i)), ' ms']), 'Interpreter', 'none')
         colorbar()
-        end
-        sgtitle(strjoin(["epochs around peaks, ", cond_labs{lab} ...
-            ", CSD transformed, normalized and weighted per subj"]), 'Interpreter', 'none')
-        fig_name = strjoin([cond_labs{lab}, "topo_csd_z"], "_")
-        savefig(fig_name)
+        colormap 'parula'
+        a = colorbar;
+        position = get(a,'Position');
+        ylabel(a,'z-transformed microvolts','FontSize',7,'Rotation',270, 'Position', [position(1)+3 position(2)]);
+    end
+    sgtitle(strjoin(["epochs around peaks, ", cond_labs{lab} ...
+        ", CSD transformed, normalized and weighted per subj"]), 'Interpreter', 'none')
+    fig_name = strjoin([cond_labs{lab}, "topo_csd_z"], "_")
+    savefig(fig_name)
 end
 
 %% Prepare ERP Plotting 
@@ -272,8 +287,9 @@ neighbours        = neighbours; % ft_prepare_neighbours(cfg_neighb, dataFC_LP);
 
 % CLUSTER TEST
 % erp vs zero
-calpha  = 0.001;
-alpha   = 0.001;
+calpha{1}  = 0.001;
+calpha{2}  = 0.01;
+alpha  = 0.001;
 
 % cfg is the configuraiton structure of fieldtrip
 cfg                     = [];
@@ -285,26 +301,33 @@ cfg.avgovertime         = 'yes';
 cfg.method              = 'montecarlo';
 cfg.statistic           = 'depsamplesT'; % really indepsamples??? With comparison against 0
 cfg.correctm            = 'cluster';
-cfg.clusteralpha        = calpha;               % 0.05;
+cfg.clusteralpha        = calpha{1};               % 0.05;
 cfg.clusterstatistic    = 'maxsum';
 cfg.minnbchan           = 0;
 cfg.neighbours          = neighbours;
 cfg.tail                = 0;
 cfg.clustertail         = 0;
 cfg.alpha               = alpha;               % 0.025;
-cfg.numrandomization    = 1000;
+cfg.numrandomization    = 3000;
 
 clear stats
 
 cbpt_cond_labs = fieldnames(all_eeg_cell); % condition labels
-diff_labels = {'diff_all_zero', 'diff_vis_occ', 'diff_const_rand1', ...
-    'diff_const_rand2', 'diff_rand1_rand2'}; % contrast labels
-cond_comp_order = [1, 2, 5, 5, 4;
-    7, 3, 4, 6, 6]; % conditions to compare
+% diff_labels = {'diff_all_zero', 'diff_vis_occ', 'diff_const_rand1', ...
+%     'diff_const_rand2', 'diff_rand1_rand2'}; % contrast labels
+diff_labels = {'diff_all_zero', 'diff_vis_occ', 'diff_const_rand1'};
+% contrast labels without rand2
+% cond_comp_order = [1, 2, 5, 5, 4;
+%                    7, 3, 4, 6, 6]; % conditions to compare in all_eeg_cell
+cond_comp_order = [1, 3, 5 ;
+    6, 2, 4 ]; % conditions to compare in all_eeg_cell without rand2
 latency = [latencies_onset; latencies_offset]/1000;
 
 % actual cluster tests
 for lab = 1:length(diff_labels)
+    if lab == 3
+        cfg.clusteralpha        = calpha{2};               % 0.05;
+    end
     for lat = 1:length(latency)
         cfg.latency  = latency(:,lat)'; % time interval over which the experimental
         % conditions must be compared (in seconds)
@@ -312,7 +335,7 @@ for lab = 1:length(diff_labels)
             all_eeg_cell.(cbpt_cond_labs{cond_comp_order(1,lab)}){:}, ...
             all_eeg_cell.(cbpt_cond_labs{cond_comp_order(2,lab)}){:});
         % if the test yields no significant clusters, add the fields to
-        % avoid an error. 
+        % avoid an error.
         if ~isfield(tmp, 'posclusters')
             tmp.posclusters = [];
             tmp.posclusterslabelmat = [];
@@ -363,31 +386,37 @@ cd(peak_erp_plots_dir)
 
 % actual plot code
 for lab = 1:length(diff_labels)
+    if lab == 3
+        cfg.clusteralpha        = calpha{2};               % 0.05;
+    else
+        cfg.clusteralpha        = calpha{1};               % 0.05;
+    end
     figure(lab)
     for lat = 1:length(latencies_onset)
         % prepare plot
         subplot(topo_rows, topo_cols, lat);
         if ~isempty(stats.(diff_labels{lab})(lat).posclusters)
-        % Make a vector of all p-values associated with the clusters from ft_timelockstatistics.
-        pos_cluster_pvals = [stats.(diff_labels{lab})(lat).posclusters(:).prob];
+            % Make a vector of all p-values associated with the clusters from ft_timelockstatistics.
+            pos_cluster_pvals = [stats.(diff_labels{lab})(lat).posclusters(:).prob];
 
-        % Then, find which clusters are deemed interesting to visualize, here we use a cutoff criterion based on the
-        % cluster-associated p-value, and take a 5% two-sided cutoff (i.e. 0.025 for the positive and negative clusters,
-        % respectively
-        pos_clust = find(pos_cluster_pvals < calpha);
-        pos       = ismember(stats.(diff_labels{lab})(lat).posclusterslabelmat, pos_clust);
+            % Then, find which clusters are deemed interesting to visualize, here we use a cutoff criterion based on the
+            % cluster-associated p-value, and take a 5% two-sided cutoff (i.e. 0.025 for the positive and negative clusters,
+            % respectively
+            pos_clust = find(pos_cluster_pvals < cfg.clusteralpha);
+            pos       = ismember(stats.(diff_labels{lab})(lat).posclusterslabelmat, pos_clust);
 
-        % and now for the negative clusters...
-        neg_cluster_pvals = [stats.(diff_labels{lab})(lat).negclusters(:).prob];
-        neg_clust         = find(neg_cluster_pvals < calpha);
-        neg               = ismember(stats.(diff_labels{lab})(lat).negclusterslabelmat, neg_clust);
+            % and now for the negative clusters...
+            neg_cluster_pvals = [stats.(diff_labels{lab})(lat).negclusters(:).prob];
+            neg_clust         = find(neg_cluster_pvals < cfg.clusteralpha);
+            neg               = ismember(stats.(diff_labels{lab})(lat).negclusterslabelmat, neg_clust);
 
-        clust_chans = unique([find(neg); find(pos)]);
-%         chans_to_plot = find(stats.(diff_labels{lab})(i).mask);
+            clust_chans = unique([find(neg); find(pos)]);
+            %         chans_to_plot = find(stats.(diff_labels{lab})(i).mask);
         end
         topoplot(stats.(diff_labels{lab})(:, lat).stat, chan_locs, 'maplimits',  ...
             zlims_all_cbpt, 'electrodes','on', 'ecolor', 'black',...
             'emarker2', {clust_chans, '*', 'white'}, 'style', head_style);
+        colormap 'turbo'
         title(strcat(['average of ', num2str(latencies_onset(lat)), ' to ', ...
             num2str(latencies_offset(lat)), ' ms']), 'Interpreter', 'none')
         a = colorbar;
@@ -399,10 +428,11 @@ for lab = 1:length(diff_labels)
         clear neg neg_clust pos pos_clust neg_cluster_pvals pos_cluster_pvals
 
     end
+
     sgtitle(strjoin(["CBPT, epochs ar. peaks,", ...
         "contr: ", diff_labels{lab}, ...
         ", CSD, normalized & weighted per subj, calpha = ", ...
-        calpha, ", alpha = ", alpha]), 'Interpreter', 'none')
+        cfg.clusteralpha, ", alpha = ", cfg.alpha]), 'Interpreter', 'none')
     fig_name = strjoin([diff_labels{lab}, "topo_CBPT_csd_z"], "_")
     savefig(fig_name);
 
@@ -434,12 +464,14 @@ end
 % prepare single-channel plotting
 
 clear index_struct
-interesting_lats = [185, 245, 275, 575]; % lower limit of latencies that 
-lat_labs = {"lat_180_210", "lat_240_270", "lat_270_300", "lat_570_600"};
+interesting_lats = [185, 245, 305]; % lower limit of latencies that
+lat_labs = {"lat_180_210", "lat_240_270", "lat_300_330"};
 num_chans = 1; % number of minimal/maximal channels to extract
 % might be interesting
-diff_labels = {'diff_all_zero', 'diff_vis_occ', 'diff_const_rand1', ...
-    'diff_const_rand2', 'diff_rand1_rand2'}; % contrast labels
+% diff_labels = {'diff_all_zero', 'diff_vis_occ', 'diff_const_rand1', ...
+%     'diff_const_rand2', 'diff_rand1_rand2'}; % contrast labels
+diff_labels = {'diff_all_zero', 'diff_vis_occ', 'diff_const_rand1'};
+% contrast labels without rand2
 % index_struct.diff_all_zero. = struct();
 for lab = 2:length(diff_labels)
 %     index_struct.(diff_labels{lab}) = struct();
@@ -469,7 +501,7 @@ for lab = 2:length(diff_labels)
         clear chan_lab_max chan_lab_min max_chan_idx min_chan_idx interesting_window
     end
 end
-sign([[-0.5,5, 0.01, -54 ];[1.5, -5, 11, 50 ]] )
+% sign([[-0.5,5, 0.01, -54 ];[1.5, -5, 11, 50 ]] )
 
 
 %% Single Channel ERP Plot + Topo
@@ -478,8 +510,18 @@ minmax = {'min', 'max'};
 num_figs = 1:[length(lat_labs) * length(diff_labels)-1]*length(minmax);
 count = 1;
 z_epoch_mean = renameStructField(z_epoch_mean, 'diff_occ', 'diff_vis_occ');
-cond_comp_order = [1, 3, 5, 5, 4;
-                   7, 2, 4, 6, 6];
+epoch_mean = renameStructField(epoch_mean, 'diff_occ', 'diff_vis_occ');
+% remove everything reminding of random2
+z_epoch_mean = rmfield(z_epoch_mean, 'rand2');
+z_epoch_mean = rmfield(z_epoch_mean, 'diff_rand1_rand2');
+z_epoch_mean = rmfield(z_epoch_mean, 'diff_const_rand2');
+epoch_mean = rmfield(epoch_mean, 'rand2');
+epoch_mean = rmfield(epoch_mean, 'diff_rand1_rand2');
+epoch_mean = rmfield(epoch_mean, 'diff_const_rand2');
+% cond_comp_order = [1, 3, 5, 5, 4;
+%                    7, 2, 4, 6, 6];
+cond_comp_order = [1, 3, 5;
+                   6, 2, 4]; % without rand2
 close all
 
 for lab = 2:length(diff_labels)
@@ -518,6 +560,7 @@ for lab = 2:length(diff_labels)
             a = colorbar;
             position = get(a,'Position');
             ylabel(a,'z-Values','FontSize',12,'Rotation',270, 'Position', [position(1)+1 position(2)]);
+            colormap 'parula'
 
             % figure
             sgtitle(strjoin([diff_labels{lab}, ...
@@ -534,7 +577,7 @@ end
 
 %% ERP image
 
-clear z_ALLEEG TMPEEG z_mean_struct mean_struct z_tmpEEG
+clear z_ALLEEG TMPEEG z_mean_struct mean_struct z_tmpEEG CONDEEG CONDEEG2 TMPEEG2
 sum(arrayfun(@(s) length(s.epoch), ALLEEG)) % how many epochs we need. 
 s = 1;
 while s <= length(ALLEEG)
@@ -580,25 +623,28 @@ for s = 1:length(CONDEEG2)
     CONDEEG2(s) = EEG;
 end
 % remove random CONSTANT
-for s = 1:length(MODEEG)
+CONDEEG = ALLEEG;
+
+for s = 1:length(CONDEEG)
     EEG = CONDEEG(s);
     EEG = pop_selectevent( EEG, 'TRAJ',{'RANDOM1', 'RANDOM2'},'deleteevents',...
         'off','deleteepochs','on','invertepochs','off');
     CONDEEG(s) = EEG;
 end
-% remove constant RANDOM
-for s = 1:length(MODEEG)
-    EEG = CONDEEG(s);
-    EEG = pop_selectevent( EEG, 'TRAJ',{'RANDOM1', 'RANDOM2'},'deleteevents',...
+CONDEEG2 = ALLEEG;
+% remove constant RANDOM1
+for s = 1:length(CONDEEG2)
+    EEG = CONDEEG2(s);
+    EEG = pop_selectevent( EEG, 'TRAJ',{'RANDOM2', 'CONST'},'deleteevents',...
         'off','deleteepochs','on','invertepochs','off');
-    CONDEEG(s) = EEG;
+    CONDEEG2(s) = EEG;
 end
 
 
 % clear MODEEG
 fieldnames(cond_ind)
 
-interesting_lats = [185, 245, 275, 575]; % lower limit of latencies that 
+interesting_lats = [185, 245, 305]; % lower limit of latencies that 
 lat = 1;
 interesting_window = max(find(latencies_onset < interesting_lats(lat))); % find the topo window
 % that is the most interesting in previous ERP plots.
@@ -672,13 +718,15 @@ for s = 2:length(CONDEEG2)
         size(TMPEEG2.epoch,2)+size(z_tmpEEG.epoch, 2)) = z_tmpEEG.epoch;
     epoch_vec = [];
 end
-
 TMPEEG2.trials = length(TMPEEG2.epoch);
+
 count = 1;
 clear chan_lab_cell
 clear chan_lab_vec
-diff_labels = {'diff_all_zero', 'diff_vis_occ', 'diff_const_rand1', ...
-    'diff_const_rand2', 'diff_rand1_rand2'};
+% diff_labels = {'diff_all_zero', 'diff_vis_occ', 'diff_const_rand1', ...
+%     'diff_const_rand2', 'diff_rand1_rand2'};
+diff_labels = {'diff_all_zero', 'diff_vis_occ', 'diff_const_rand1'};
+% without rand2
 % get vector of all interesting channels
 % for lab = 2:length(diff_labels)
 %     for lat = 1:length(lat_labs)
@@ -704,16 +752,15 @@ project_channel = [[]];
 sort_type = {'S 40' 'S 50'};
 % sort_win = [-0.1 0.1];
 % align = 0;
-unit = 'z-values';
+unit = 'z-transformed \muV';
 % chan = 32;
 % chan_lab = chan_lab_cell{chan};
-chan_lab = 'P8'
+chan_lab = 'P4'
 chan_no = find(strcmp({ALLEEG(s).chanlocs.labels}, chan_lab));
 alpha = 0.001;
 % chan_no = chan_idx_vec(chan);
 % eeg_c = lab;
-% eeg_condition = cond_labs{eeg_c};
-eeg_condition = 'visible';
+
 % sort_event_field = sorting_cond{cond};
 sort_event_field = 'pursuit_lat';
 % [min_val, max_val] = bounds(TMPEEG.data, 'all')
@@ -731,17 +778,23 @@ sort_event_field = 'pursuit_lat';
 % eeglab redraw
 
 % plotting of ERP image
+% eeg_condition = cond_labs{eeg_c};
+eeg_condition = 'constant';
 figure; 
 title = strjoin(["All subjects, normalized & weighted, csd, Smoothing factor "...
     smooth,", decimate " dec_fac ", chan " chan_lab],"");
 pop_erpimage(TMPEEG,plot_type, chan_no,[[]], title,smooth, dec_fac, ...
-    sort_type,[],sort_event_field ,'yerplabel', unit,'erp', 'on', ...
-    'cbar','on','cbar_title',unit, 'topo', ...
-    { chan_no TMPEEG.chanlocs TMPEEG.chaninfo });
+    sort_type,[],sort_event_field ,'yerplabel', unit,'erp', 'on', 'erpalpha', 0.001,...
+    'cbar','on','cbar_title',unit, ...
+    'topo', { chan_no TMPEEG.chanlocs TMPEEG.chaninfo });
+colormap 'parula'
+% a = colorbar;
+% position = get(a,'Position');
+% ylabel(a,'z-values','FontSize',12,'Rotation',270, 'Position', [position(1)+1 position(2)]);
 sgtitle(strjoin(["contrast: " eeg_condition, ", sorted by: ", ...
     sort_event_field " from top (higher) to bottom (lower)"],""), 'Interpreter', 'None');
 
-eeg_condition = 'occluded';
+eeg_condition = 'random1';
 smooth = round(length(TMPEEG2.epoch)/15,0); % number of trials
 dec_fac = smooth/2; % ratio of trials in to plot out. 
 % plotting of ERP image
@@ -749,9 +802,10 @@ figure;
 title = strjoin(["All subjects, normalized & weighted, csd, Smoothing factor "...
     smooth,", decimate " dec_fac ", chan " chan_lab],"");
 pop_erpimage(TMPEEG2,plot_type, chan_no,[[]], title,smooth, dec_fac, ...
-    sort_type,[],sort_event_field ,'yerplabel', unit,'erp', 'on', ...
-    'cbar','on','cbar_title',unit, 'topo', ...
-    { chan_no TMPEEG2.chanlocs TMPEEG2.chaninfo });
+    sort_type,[],sort_event_field ,'yerplabel', unit,'erp', 'on', 'erpalpha', 0.001,...
+    'cbar','on','cbar_title',unit, ...
+    'topo', { chan_no TMPEEG2.chanlocs TMPEEG2.chaninfo });
+colormap 'parula'
 sgtitle(strjoin(["contrast: " eeg_condition, ", sorted by: ", ...
     sort_event_field " from top (higher) to bottom (lower)"],""), 'Interpreter', 'None');
 
