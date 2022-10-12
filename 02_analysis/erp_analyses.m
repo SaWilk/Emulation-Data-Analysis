@@ -28,6 +28,7 @@ parent_dir = strjoin(parent_dir, filesep);
 parent_dir_2 = filepath_parts(1:end-2);
 parent_dir_2 = strjoin(parent_dir_2, filesep);
 output_dir = strjoin([parent_dir_2, "Emulation-Data-Output"], filesep);
+track_data_dir = strjoin([output_dir, "03_parallelize_with_traj"], filesep);
 mean_matrices_path = strjoin([output_dir, 'mean_matrices'], filesep);
 mkdir(mean_matrices_path);
 mean_matrices_peaks_epoched_path = strjoin([mean_matrices_path, 'peaks'], filesep);
@@ -61,6 +62,32 @@ end
 
 ALLEEG = ALLEEG2;
 clear ALLEEG2
+
+%% Plot the error
+
+% load tracking data
+cd(track_data_dir);
+load 'all_tracking_data.mat'
+% parallelize with ALLEEG 
+cnt = 1;
+s = 1;
+while s <= length({ALLEEG.subject})
+    % this is such smart code...
+    % it will loop through subj ids but give an index where the
+    % ALLEEG subjects are in track_data
+    idx = find(cellfun(@isequal, {track_data.subject} , ...
+        repmat({ALLEEG(s).subject}, size({track_data.subject}))));
+    if ~isempty(idx)
+    tmp_idx(cnt) = idx;
+    cnt = cnt +1;
+    end
+    s = s + 1;
+end
+track_data = track_data(tmp_idx);
+clear tmp_idx
+
+
+
 
 
 %% Prepare for Plotting
