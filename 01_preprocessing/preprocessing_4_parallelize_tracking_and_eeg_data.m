@@ -48,6 +48,7 @@ subj_paths = genpath(track_data_path); % generate subfolder paths
 subj_paths = strsplit(subj_paths, ";"); % split the string vector at ;
 subj_paths(1) = []; % remove top level entry
 subj_paths(end) = []; % remove final entry
+out_path = strjoin([grandparent_path, "Emulation-Data-Output", "03_parallelize_with_traj"], filesep);
 
 % eeg data
 eeg_data_path = strjoin([grandparent_path, "Emulation-Data-Output", "02_IClabel"], filesep); % get root path to data folder
@@ -97,6 +98,10 @@ for task = 1:2
     end
 end
 warning("on","all");
+
+track_file_name_suffix = "all_tracking_data_unprocessed.mat";
+file_name2 = strcat([out_path, track_file_name_suffix]);
+save(strjoin(file_name2, '\'), 'track_data');
 
 
 %% Upsample Tracking Data to Match EEG Data SR
@@ -831,7 +836,6 @@ end
 
 % https://eeglab.org/tutorials/ConceptsGuide/Data_Structures.html
 
-out_path = strjoin([grandparent_path, "Emulation-Data-Output", "03_parallelize_with_traj"], filesep);
 EEG_file_name_suffix = "parallelized";
 track_file_name_suffix = "all_tracking_data.mat";
 

@@ -1,8 +1,9 @@
 function error_heatmap(track_data, frame_rate)
 %ERROR HEATMAP Plots the error per trial segment
-%   Takes the EEGLAB structure ALLEEG and returns a plot of the error per
+%   Takes the track_data structure and frame rate of not upsampled data and
+%   returns a plot of the error per
 %   trial segment as a heatmap. For now, automatically calculates the error
-%   for the first trial segment respectively, from trial start to 2s
+%   for the first trial segment respectively, from trial start to 2s. 
 
 clear all_track_error
 segment = [1:frame_rate*2];
