@@ -1,4 +1,4 @@
-function [vin, vineeg] = vincentiles_eeg(dat,eegdata,nb_bins)
+function [vin, vineeg, vin_index, vin_data] = vincentiles_eeg(dat,eegdata,nb_bins)
 
 % vincentiles_eeg.m
 %
@@ -8,6 +8,8 @@ function [vin, vineeg] = vincentiles_eeg(dat,eegdata,nb_bins)
 % 
 % Originally written by:  Trisha van Zandt
 % adapted by Sven Hoffmann for EEG-vincentiles 15/07/2013
+% adapted by Saskia Wilken to also give indices and vincentiile data
+% 30.11.2022
 
 
 % sort data and get length and dimensions
@@ -22,9 +24,9 @@ end
 
 % sort eegdata
 tmpeeg=zeros(dimseeg);
-for ind = 1: length(index)
+for ind = 1:length(index)
    tmpeeg(:,ind) = eegdata(:,index(ind));
-end;
+end
 
 
 % create temporary arrays with nb_bins replications of each value
@@ -36,9 +38,13 @@ copyxeeg = repmat(tmpeeg',[1,1,nb_bins]);
 vinxeeg = shiftdim(copyxeeg,2);
 vinxeeg = reshape(vinxeeg,dimseeg(2),nb_bins,neeg);
 
-
 % obtain mean values for each (RT EEG)bin
 vin = mean(vinx)';
 vineeg = squeeze(mean(vinxeeg,1));
 
+% get indices of trials per vincentile
+index = index(1:floor(length(index)/nb_bins)*nb_bins); % omits some values
+vin_index = reshape(index, [length(index)/nb_bins, nb_bins]);
 
+% get data associated with vincentiles
+vin_data = dat(vin_index);

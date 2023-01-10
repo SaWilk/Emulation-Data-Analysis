@@ -15,9 +15,6 @@ clc
 
 %% Define Paths
 
-% TODO: Subject 03 something s =1 does neither have a pursuit latency nor
-% an artifact_error field. WHY?!
-
 eeglab;
 close;
 
@@ -99,6 +96,8 @@ for s = 1:length(TMPEEG)
                 % calculate error in epoch
                 %  get current error
                 cur_error = abs(track_data(s).upsamp_data.(epoch_task)(epoch_trial).error);
+                cur_purs = track_data(s).upsamp_data.(epoch_task)(epoch_trial).purs_y;
+                cur_track = track_data(s).upsamp_data.(epoch_task)(epoch_trial).traj_y;
                 epoch_start = epoch_trial_latency+epoch_lims(1);
                 epoch_end = epoch_trial_latency+epoch_lims(2);
                 % account for first and last epochs
@@ -109,6 +108,15 @@ for s = 1:length(TMPEEG)
                     epoch_end = length(cur_error);
                 end
                 error_of_epoch = mean(cur_error(epoch_start:epoch_end), 'omitnan');
+% %                  logic check
+%                 figure()
+%                 plot([epoch_start:epoch_end]*0.004, cur_purs(epoch_start:epoch_end))
+%                 hold on
+%                 plot([epoch_start:epoch_end]*0.004, cur_track(epoch_start:epoch_end))
+%                 plot([epoch_start:epoch_end]*0.004, cur_error(epoch_start:epoch_end))
+%                 hold off
+%                 legend("pursuit", "trajectory", "error")
+%                 xline(epoch_trial_latency*0.004)
                 % work on event field
                 % get event fields that belong to epoch
                 epoch_idx = find([EEG.event.epoch] == ep);

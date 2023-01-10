@@ -69,7 +69,7 @@ clear zlims
 
 all_zlims = nan(2, length(ALLEEG));
 % % make sure all plots have the same color scale
-for s = 1:length(ALLEEG) %length(diff_labels)
+for s = 1:length(ALLEEG) 
     all_zlims(:, s) = [prctile( ...
         ALLEEG(s).CSD_data, 35, 'all'), prctile( ...
         ALLEEG(s).CSD_data, 65, 'all')]';
@@ -164,7 +164,7 @@ for s = 2:length(CONDEEG)
     % normalize each subjects' data
     z_tmpEEG = CONDEEG(s);
     % normalize data
-    z_tmpEEG.data = [];%MODEEG(s).data(:,:,cond_ind(s).(cond_labs{lab}));
+    z_tmpEEG.data = [];
     z_tmpEEG.data = normalize(CONDEEG(s).data,2, 'zscore');
     % get location where new data should go
 %     data_idx = size(TMPEEG.data, 3)+1:size(TMPEEG.data, 3)+size(z_tmpEEG.data, 3);
@@ -186,12 +186,15 @@ for s = 2:length(CONDEEG)
 end
 TMPEEG.trials = length(TMPEEG.epoch);
 
+% create pixel unit epoch error
 clear vec
 vec = [TMPEEG.event.epoch_error]*1080;
 for i = 1:length(vec)
     TMPEEG.event(i).('epoch_error_pix') = vec(i);
 end
 
+
+%% same for the second condiiton
 
 TMPEEG2 = CONDEEG2(1);
 TMPEEG2.data = normalize(CONDEEG2(1).data,2, 'zscore');
@@ -201,7 +204,7 @@ for s = 2:length(CONDEEG2)
     % normalize each subjects' data
     z_tmpEEG = CONDEEG2(s);
     % normalize data
-    z_tmpEEG.data = [];%MODEEG(s).data(:,:,cond_ind(s).(cond_labs{lab}));
+    z_tmpEEG.data = [];
     z_tmpEEG.data = normalize(CONDEEG2(s).data,2, 'zscore');
     % get location where new data should go
 %     data_idx = size(TMPEEG.data, 3)+1:size(TMPEEG.data, 3)+size(z_tmpEEG.data, 3);
@@ -222,35 +225,17 @@ for s = 2:length(CONDEEG2)
     epoch_vec = [];
 end
 TMPEEG2.trials = length(TMPEEG2.epoch);
+
+% create pixel unit epoch error
 clear vec
 vec = [TMPEEG2.event.epoch_error]*1080;
 for i = 1:length(vec)
     TMPEEG2.event(i).('epoch_error_pix') = vec(i);
 end
-count = 1;
-clear chan_lab_cell
-clear chan_lab_vec
-% diff_labels = {'diff_all_zero', 'diff_vis_occ', 'diff_const_rand1', ...
-%     'diff_const_rand2', 'diff_rand1_rand2'};
-diff_labels = {'diff_all_zero', 'diff_vis_occ', 'diff_const_rand1'};
-% without rand2
-% get vector of all interesting channels
-% for lab = 2:length(diff_labels)
-%     for lat = 1:length(lat_labs)
-%         for m = 1:2
-%             chan_lab_cell{count} = index_struct.(diff_labels{lab}).(num2str(lat_labs{lat}))(1).(minmax{m}){:};
-%             chan_idx_vec(count) = index_struct.(diff_labels{lab}).(num2str(lat_labs{lat}))(2).(minmax{m})(:);
-%             count = count + 1;
-%         end
-%     end
-% end
-% chan_lab_cell_plus = {chan_lab_cell{:},chan_lab_min{:},chan_lab_max{:}}
-% chan_idx_vec_plus = [chan_idx_vec,min_chan_idx,max_chan_idx]
 
 
-%% Actual erp image plotting and parameters
-% sorting_cond = {'epoch_error', 'pursuit_lat', 'epoch_error_z', 'pursuit_lat_z'};
-% cond = 1;
+%% Set ERPimage parameters
+
 smooth = round(length(TMPEEG.epoch)/15,0); % number of trials
 dec_fac = smooth/2; % ratio of trials in to plot out. 
 % if the smoothing width is larger than twice the decimation factor, no
@@ -258,32 +243,12 @@ dec_fac = smooth/2; % ratio of trials in to plot out.
 plot_type = 1; % 1 = channel, 0 = component
 project_channel = [[]];
 sort_type = {'S 40' 'S 50'};
-% sort_win = [-0.1 0.1];
-% align = 0;
 unit = 'z-transformed \muV';
-% chan = 32;
-% chan_lab = chan_lab_cell{chan};
-chan_lab = 'Cz';
+chan_lab = 'P3';
 chan_no = find(strcmp({ALLEEG(s).chanlocs.labels}, chan_lab));
 alpha = 0.001;
-% chan_no = chan_idx_vec(chan);
-% eeg_c = lab;
 
-% sort_event_field = sorting_cond{cond};
-sort_event_field = 'epoch_error';
-% [min_val, max_val] = bounds(TMPEEG.data, 'all')
-% prctile(TMPEEG.data(:,:,1:10000), [1, 10, 25, 50, 75, 90, 100], 'all')
-% prctile(ALLEEG(s).data(:,:,1:1000), [1, 10, 25, 50, 75, 90, 100], 'all')
-% prctile(CONDEEG(s).data(:,:,1:1000), [1, 10, 25, 50, 75, 90, 100], 'all')
-% prctile(z_tmpEEG.data(:,:,1:1000), [1, 10, 25, 50, 75, 90, 100], 'all')
-
-% for cond = 1:length(sorting_cond)
-%     for chan = 1:length(chan_idx_vec)
-%         for eeg_c = 1:length(cond_labs)
-        % dynamically changing image parameters
-% 
-% [ALLEEG TMPEEG index] = eeg_store(ALLEEG, TMPEEG);
-% eeglab redraw
+sort_event_field = 'pursuit_lat'; % change depending on which sorting variable you want
 time_range = [-200, 750];
 if strcmp(sort_event_field, 'epoch_error')
     plot_sortvar  = 'off';
@@ -298,8 +263,10 @@ elseif strcmp(sort_event_field, 'pursuit_lat')
     trial_ax_lab = 'pursuit latency in ms';
     trial_ax_ticks = 0:25:325;
 end
-% plotting of ERP image
-% eeg_condition = cond_labs{eeg_c};
+
+
+%% plotting of ERP image
+
 eeg_condition = 'all';
 figure; 
 title = strjoin(["All subjects, normalized & weighted, csd, Smoothing factor "...
@@ -314,7 +281,10 @@ colormap 'parula'
 sgtitle(strjoin(["contrast: " eeg_condition, ", sorted by: ", ...
     sort_event_field],""), 'Interpreter', 'None');
 
-eeg_condition = 'occluded';
+
+%% erpimage of only one condition
+
+eeg_condition = 'occluded'; % switch name here depending on which condition to plot
 smooth = round(length(TMPEEG2.epoch)/15,0); % number of trials
 dec_fac = smooth/2; % ratio of trials in to plot out. 
 % plotting of ERP image

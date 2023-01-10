@@ -183,10 +183,9 @@ for s = 1:length(subj_ids)
             cur_traj = track_data(s).upsamp_data.(task_names{task})(t).traj_y;
             cur_purs = track_data(s).upsamp_data.(task_names{task})(t).purs_y;
             cur_err = abs(cur_traj - cur_purs);
-            cur_err = cur_err(INVALID_SAMP(end):end); % remove the samples 
-            % with artifactual errors. 
             cur_mean_err = mean(cur_err);
             track_data(s).upsamp_data.(task_names{task})(t).("error") = cur_err;
+            track_data(s).upsamp_data.(task_names{task})(t).("error_pix") = cur_err*1080;
             track_data(s).upsamp_data.(task_names{task})(t).("mean_error") = cur_mean_err;
         end
     end
@@ -476,7 +475,7 @@ for s = 1:size(eeg_struct,2)
 
                     % find the event that is one event before the peak
                     % (which is the largest negative latency)
-                    tmp = [[event_cur_task.latency] - current_peak_latencies(idx)];
+                    tmp = [event_cur_task.latency] - current_peak_latencies(idx);
                     current_event_idx = max(find(tmp <= 0 ));
 
                     % insert the peak event markers at position in question
@@ -591,7 +590,7 @@ for s = 1:size(eeg_struct,2)
 
                     % find the event that is one event before the peak
                     % (which is the largest negative latency)
-                    tmp = [[event_cur_task.latency] - current_peak_latencies(idx)];
+                    tmp = [event_cur_task.latency] - current_peak_latencies(idx);
                     current_event_idx = max(find(tmp <= 0 ));
 
                     % insert the peak event markers at position in question
@@ -636,7 +635,7 @@ for s = 1:size(eeg_struct,2)
                 % locate current trial in eeg event
                 cur_trial_idx = find([event_cur_task.trial_number] == t);
                 % add field: Invalid error samples
-                event_cur_task = add_artifact_event(event_cur_task, cur_trial_idx, INVALID_SAMP)
+                event_cur_task = add_artifact_event(event_cur_task, cur_trial_idx, INVALID_SAMP);
             end
             % copy the event structure into a temporary field in eeg_struct
             eeg_struct(s).(task_names{task}) =  event_cur_task;
@@ -695,7 +694,6 @@ end
 
 %% Reject Trials Behaviorally
 
-
 % store max and mean errors and exclude trials which start with error.  
 count = 1;
 count2 = 1;
@@ -714,7 +712,7 @@ for s = 1:length(subj_ids)
             error_cell{count} = {cur_mean_errors, which_error};
             % if trial starts with latrge error, it is assumed that
             % subjects moved joystick during break. 
-            if cur_error(1) > 0.2;
+            if cur_error(1) > 0.2
                 % store these values in cell. 
                 joystick_moved_at_0{count2} = which_error;
                 count2 = count2 + 1;
@@ -832,6 +830,12 @@ end
 % end
 
 
+%% Remove Subject 18
+
+idx = find(strcmp({track_data.subject}, 'KMY6K'));
+track_data(idx) = [];
+
+
 %% Save sets
 
 % https://eeglab.org/tutorials/ConceptsGuide/Data_Structures.html
@@ -846,6 +850,7 @@ for s = 1:size(track_data, 2)
     eeg_struct(s) = pop_saveset(eeg_struct(s), 'filename', char(file_name), 'filepath', char(out_path));
 
 end
+
 file_name2 = strcat([out_path, track_file_name_suffix]);
 save(strjoin(file_name2, '\'), 'track_data');
 

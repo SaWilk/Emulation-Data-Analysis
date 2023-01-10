@@ -27,8 +27,6 @@ addpath(file_path);
 
 % get data paths for parent dirs
 filepath_parts = strsplit(file_path, filesep);
-parent_dir = filepath_parts(1:end-1);
-parent_dir = strjoin(parent_dir, filesep);
 parent_dir_2 = filepath_parts(1:end-2);
 parent_dir_2 = strjoin(parent_dir_2, filesep);
 output_dir = strjoin([parent_dir_2, "Emulation-Data-Output"], filesep);
@@ -36,7 +34,6 @@ input_dir = strjoin([parent_dir_2, "Emulation-Data-Output", "07_epochs_with_extr
 loreta_file = strjoin([parent_dir_2, "Emulation-Data-Output", "loreta-ready_files"], filesep);
 mean_matrices_path = strjoin([output_dir, 'mean_matrices'], filesep);
 mean_matrices_peaks_epoched_path = strjoin([mean_matrices_path, 'peaks'], filesep);
-condition_paths = strjoin([parent_dir_2, "Emulation-Data-Output", "Condition-Separated-EEGLAB-sets"], filesep)
 
 
 %% Load non-transformed data for creating one big dataset out of all the data
@@ -70,10 +67,6 @@ while s <= length(ALLEEG)
     event_idx = zeros(length(EEG.epoch),1);
     for ep = 1:length(EEG.epoch)
         event_idx(ep) = get_epoch_center(EEG, ep);
-%         if ~(strcmp(EEG.event(ev-del).type, 'S 40') | strcmp(EEG.event(ev-del).type, 'S 50'))
-%             EEG.event(ev-del) = [];
-%             del = del +1;
-%         end
     end
     log_idx = unfind(event_idx, length(EEG.event));
     EEG.event(~log_idx) = [];
@@ -85,87 +78,27 @@ end
 % EEG.epoch structure is no longer aligned with the EEG.event structure. 
 
 
-%% Export Data for Brain irgendwas. 
-
-for s = 1:length(ALLEEG)
-    EEG = ALLEEG(s);
-    EEG = pop_selectevent( EEG, 'artifact_error',{'VALID'},'deleteevents',...
-        'off','deleteepochs','on','invertepochs','off');
-    ALLEEG(s) = EEG;
-end
-
-% remove occluded VISIBLE
-mkdir(strjoin([condition_paths, "vis"], filesep))
-
-CONDEEG = ALLEEG;
-for s = 1:length(CONDEEG)
-    EEG = CONDEEG(s);
-    EEG = pop_selectevent( EEG, 'OCCL',{'OFF'},'deleteevents',...
-        'off','deleteepochs','on','invertepochs','off');
-    file_name = strjoin([EEG.subject, "vis_only.set"], '_');
-    file_path = strjoin([condition_paths, "vis"], filesep);
-    pop_saveset(EEG, 'filename', char(file_name), 'filepath', char(file_path));
-    CONDEEG(s) = EEG;
-end
-
-mkdir(strjoin([condition_paths, "occl"], filesep))
-
-CONDEEG2 = ALLEEG;
-% remove visible OCCLUDED
-for s = 1:length(CONDEEG2)
-    EEG = CONDEEG2(s);
-    EEG = pop_selectevent( EEG, 'OCCL',{'ON'},'deleteevents',...
-        'off','deleteepochs','on','invertepochs','off');
-        file_name = strjoin([EEG.subject, "occ_only.set"], '_');
-    file_path = strjoin([condition_paths, "occl"], filesep);
-    pop_saveset(EEG, 'filename', char(file_name), 'filepath', char(file_path));
-    CONDEEG2(s) = EEG;
-end
-
-mkdir(strjoin([condition_paths, "const"], filesep))
-
-clear CONDEEG CONDEEG2
-% remove random CONSTANT
-CONDEEG = ALLEEG;
-for s = 1:length(CONDEEG)
-    EEG = CONDEEG(s);
-    EEG = pop_selectevent( EEG, 'TRAJ',{'RANDOM1', 'RANDOM2'},'deleteevents',...
-        'off','deleteepochs','on','invertepochs','off');
-        file_name = strjoin([EEG.subject, "const_only.set"], '_');
-    file_path = strjoin([condition_paths, "const"], filesep);
-    pop_saveset(EEG, 'filename', char(file_name), 'filepath', char(file_path));
-    CONDEEG(s) = EEG;
-end
-
-mkdir(strjoin([condition_paths, "rand1"], filesep))
-
-CONDEEG2 = ALLEEG;
-% remove constant RANDOM1
-for s = 1:length(CONDEEG2)
-    EEG = CONDEEG2(s);
-    EEG = pop_selectevent( EEG, 'TRAJ',{'RANDOM2', 'CONST'},'deleteevents',...
-        'off','deleteepochs','on','invertepochs','off');
-        file_name = strjoin([EEG.subject, "rand1_only.set"], '_');
-    file_path = strjoin([condition_paths, "rand1"], filesep);
-    pop_saveset(EEG, 'filename', char(file_name), 'filepath', char(file_path));
-    CONDEEG2(s) = EEG;
-end
-
-
-%% Actual Data Export
+%% Data Export
 
 cd(mean_matrices_peaks_epoched_path)
 
 load('mean_struct.mat')
 
+% file and folder names
 cd(loreta_file)
+file_names_out = {"complete_occvis"};
+
+% define time intervals of clusters
+SR = 250;
+time_windows = [0.004, 0.748]*SR;
+condition_cell = {"occ", "vis"};
+
 % make sure files are saved as ASCII
 feature('DefaultCharacterSet', 'ASCII');
 
 cond_labs = {'vis', 'occ', 'rand1', 'const'};
-% delete channels that are non-standard
 
-% delete the following channels: 
+% delete channels that are non-standard
 del_chans = {'O9', 'O10', 'P11', 'P12'};
 
 % get index of useless channels. 
@@ -177,38 +110,31 @@ for cond = 1:length(cond_labs)
     mean_struct.(cond_labs{cond})(del_idx,:,:) = [];
 end
 
-% Delection from ALLEEG structure
+% Deletion from ALLEEG structure
 ALLEEG(1).chanlocs(del_idx) = [];
 chanlocs = ALLEEG(1).chanlocs;
 
-% export all data
-for s = 1:size(mean_struct.all,3)
-    for cond = 1:length(cond_labs)
-        EEG = ALLEEG(s);
-        eeglab2loreta(chanlocs, mean_struct.(cond_labs{cond})(:,:,s), 'exporterp', 'on');
-        % rename the new file because the output is stupid and I cannot define
-        % a name in the eeglab2loreta function.
-        new_filename = strjoin([EEG.subject, cond_labs{cond}, "loreta", "ERP.txt"], '_');
-        movefile("erp.txt", new_filename);
+% export files adapted for sLORETA
+for cont = 1:size(condition_cell, 1)
+    cur_dir = strjoin([loreta_file, file_names_out{cont}], "\");
+    mkdir(cur_dir);
+    cd(cur_dir);
+    for cond = 1:size(condition_cell(cont, :), 2)
+        for s = 1:size(mean_struct.(condition_cell{cont, cond}),3)
+            eeglab2loreta(chanlocs, mean_struct.(condition_cell{cont, cond})(:, ...
+                time_windows(cont, 1):time_windows(cont, 2), s), 'exporterp', 'on');
+            % rename the new file because I cannot define
+            % a name in the eeglab2loreta function.
+            new_filename = strjoin([ALLEEG(s).subject, "Cluster", file_names_out{cont}, ...
+                "Condition", condition_cell{cont, cond}, "Loreta-ready", ...
+                "ERP", "Time-window", time_windows(cont, 1)*1000/SR,"-", ...
+                time_windows(cont, 2)*1000/SR, ".txt"], '_');
+            movefile("erp.txt", new_filename);
+        end
     end
 end
 
-% export only a time window
-SR = 250;
-time_window = round([0.175, 0.225]*SR);
-
-for s = 1:size(mean_struct.all,3)
-    for cond = 1:length(cond_labs)
-        EEG = ALLEEG(s);
-        eeglab2loreta(chanlocs, mean_struct.(cond_labs{cond})(:,time_window,s), 'exporterp', 'on');
-        % rename the new file because the output is stupid and I cannot define
-        % a name in the eeglab2loreta function.
-        new_filename = strjoin([EEG.subject, cond_labs{cond}, "loreta", "ERP_only_P2.txt"], '_');
-        movefile("erp.txt", new_filename);
-    end
-end
-
-% save the time vector as well. 
+% save the time vector as well.
 writematrix(EEG.times', 'time_vector.txt');
 
 
