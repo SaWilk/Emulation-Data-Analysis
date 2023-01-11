@@ -90,8 +90,6 @@ event_peaks = {'S 40' 'S 50'};
 base_lims_A = [-1000 0];
 base_lims_B = [-1000 0];
 base_lims_peaks = [-500 0];
-test = {file_names.name}
-test()
 
 %% loop through files and save epoched data
 
