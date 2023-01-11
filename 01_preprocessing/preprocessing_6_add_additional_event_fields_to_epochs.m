@@ -15,9 +15,6 @@ clc
 
 %% Define Paths
 
-% TODO: Subject 03 something s =1 does neither have a pursuit latency nor
-% an artifact_error field. WHY?!
-
 eeglab;
 close;
 
@@ -99,6 +96,8 @@ for s = 1:length(TMPEEG)
                 % calculate error in epoch
                 %  get current error
                 cur_error = abs(track_data(s).upsamp_data.(epoch_task)(epoch_trial).error);
+                cur_purs = track_data(s).upsamp_data.(epoch_task)(epoch_trial).purs_y;
+                cur_track = track_data(s).upsamp_data.(epoch_task)(epoch_trial).traj_y;
                 epoch_start = epoch_trial_latency+epoch_lims(1);
                 epoch_end = epoch_trial_latency+epoch_lims(2);
                 % account for first and last epochs
@@ -109,6 +108,15 @@ for s = 1:length(TMPEEG)
                     epoch_end = length(cur_error);
                 end
                 error_of_epoch = mean(cur_error(epoch_start:epoch_end), 'omitnan');
+% %                  logic check
+%                 figure()
+%                 plot([epoch_start:epoch_end]*0.004, cur_purs(epoch_start:epoch_end))
+%                 hold on
+%                 plot([epoch_start:epoch_end]*0.004, cur_track(epoch_start:epoch_end))
+%                 plot([epoch_start:epoch_end]*0.004, cur_error(epoch_start:epoch_end))
+%                 hold off
+%                 legend("pursuit", "trajectory", "error")
+%                 xline(epoch_trial_latency*0.004)
                 % work on event field
                 % get event fields that belong to epoch
                 epoch_idx = find([EEG.event.epoch] == ep);
@@ -146,6 +154,23 @@ eeglab redraw
 
 % eeg_retrieve() % Retrieve an EEG dataset from the variable
 %                    containing all datasets (standard: TMPEEG).
+
+% %% Rename electrodes in EEG files
+% 
+% % renaming the electrodes from P5 and P6 onwards
+% % renaming the elctrodes O10 and O9 to PO10 and PO9
+% false_labels_trodes = {'P7', 'P8', 'P9', 'P10', 'P11', 'P12', 'O9', 'O10'};
+% rename_trodes = {'P5', 'P6', 'P7', 'P8', 'P9', 'P10', 'PO9', 'PO10'};
+% 
+% for s = 1:length(ALLEEG)
+%     EEG = ALLEEG(s);
+%     for trode = 1:length(rename_trodes)
+%         trode_idx = find(strcmpi(false_labels_trodes{trode}, {EEG.chanlocs.labels}));
+%         EEG.chanlocs(trode_idx).labels = rename_trodes{trode};
+%     end
+%     ALLEEG(s) = EEG;
+% end
+% Obviously not working. Let's not do that. 
 
 
 %% Calculate latency of pursuit peak following trajectory peak and put in event field
@@ -301,91 +326,4 @@ end
 
 eeglab redraw
 
-
-%% Check what the pursuit latencies look like
-
-% criteria:
-% - pursuit peak with prominence = 0.05
-% - a pursuit peak must follow the trajectory peak in the same epoch
-% - pursuit and trajectory peaks must go in the same direction (up or down)
-% - pursuit peak latency is between 80 and 300 ms. 
-% - central peak of the epoch is not in the first half a second of a trial
-
-disp(strjoin([round(no_purs/((purs_count+no_purs)/100),0), ...
-    "% (", no_purs, " out of ", purs_count+no_purs, ...
-    ") trajectory peaks are not followed by a pursuit peak."],""))
-% at this time, 31472 out of 65627 trajectory peaks are not followed by a 
-% pursuit peak (47.96%)
-pursuit_lats = [];
-all_pursuit_lats = [];
-pursuit_lats_z = [];
-all_pursuit_lats_z = [];
-epoch_errors = [];
-all_epoch_errors = [];
-epoch_errors_z = [];
-all_epoch_errors_z = [];
-
-for s = 1:length(TMPEEG)
-    % pursuit latencies raw
-    pursuit_lats = [TMPEEG(s).event.pursuit_lat];
-    % concatenate pursuit latencies of current subj with previous subj
-    all_pursuit_lats = [all_pursuit_lats, pursuit_lats];
-    % normalized pursuit latencies
-    pursuit_lats_z = [TMPEEG(s).event.pursuit_lat_z];
-    all_pursuit_lats_z = [all_pursuit_lats_z, pursuit_lats_z];
-    % epoch error raw
-    epoch_errors = [TMPEEG(s).event.epoch_error];
-    all_epoch_errors = [all_epoch_errors, epoch_errors];
-    % normalized epoch error
-    epoch_errors_z = [TMPEEG(s).event.epoch_error_z];
-    all_epoch_errors_z = [all_epoch_errors, epoch_errors_z];
-end
-
-% keep only one of the copies of the pursuit latency field values each. 
-unique_lats_idx = find(diff(all_pursuit_lats));
-% this method is not 100% failsafe - there is a chance that two following
-% pursuit latencies are exactly the same and they would be missed by this
-% algorithm. However, most pursuit lats should be in there. 
-all_pursuit_lats_unique = all_pursuit_lats(unique_lats_idx);
-unique_lats_idx_z = find(diff(all_pursuit_lats_z));
-all_pursuit_lats_unique_z = all_pursuit_lats_z(unique_lats_idx_z);
-
-BINWIDTH = 12;
-range(all_pursuit_lats_unique)
-PROMINENCE_THRESH = 0.05; 
-ACCEPTABLE_LATS = [80, 300];
-histogram(all_pursuit_lats_unique, ...
-    round(range(all_pursuit_lats_unique)/BINWIDTH));
-title(['Pursuit Latency'])
-subtitle(strjoin(["Prominence thresh ", PROMINENCE_THRESH, ...
-    ", peaks in same direction, latency lims between ", ...
-    ACCEPTABLE_LATS, " ms", "binwidth = ", BINWIDTH, " ms"]))
-mink(all_pursuit_lats_unique, 100)
-% purs_count and length(all_pursuit_lats_unique) do not have the same size.
-% which is odd. 
-
-PROMINENCE_THRESH = 0.05; 
-ACCEPTABLE_LATS = [80, 300];
-histogram(all_pursuit_lats_unique_z, ...
-    round(range(all_pursuit_lats_unique)/BINWIDTH));
-title(['Pursuit Latency z-transformed per subject'])
-subtitle(strjoin(["Prominence thresh ", PROMINENCE_THRESH, ...
-    ", peaks in same direction, latency lims between ", ...
-    ACCEPTABLE_LATS, " ms", "binwidth = ", BINWIDTH, " ms"]))
-mink(all_pursuit_lats_unique, 100)
-
-% check the epoch error distribution
-
-figure()
-BINWIDTH = 0.02;
-histogram(all_epoch_errors, round(range(all_epoch_errors)/BINWIDTH));
-title(['Epoch Error'])
-subtitle(strjoin(["All epochs, all errors over time, binwidth = ", ...
-    BINWIDTH*100, " % of screen"]))
-
-figure()
-histogram(all_epoch_errors_z, round(range(all_epoch_errors)/BINWIDTH));
-title(['Epoch Error z-transformed'])
-subtitle(strjoin(["All epochs, all errors over time, binwidth = ", ...
-    BINWIDTH*100, " % of screen"]))
 
