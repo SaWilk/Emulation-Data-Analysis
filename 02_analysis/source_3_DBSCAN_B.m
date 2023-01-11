@@ -149,110 +149,113 @@ for frq = 1:size(freq_labels, 2)
             
         end % cluster loop
 
-       %% PLOTTING
-        
-        % PLOT CLUSTERS ON ORTHOGONAL MRI SLICES
-        if sum(contains(plot,'MRI','IgnoreCase',true)) > 0
-            
-            % LOAD MRI AND ATLAS
-            load standard_mri.mat;
-            
-            mri     = ft_convert_units(mri,'cm');
-            mri     = ft_volumereslice([],mri);
-            
-            atlas   = ft_read_atlas([fileparts(which('ft_defaults')) '\template\atlas\aal\ROI_MNI_V4.nii']);
-            atlas   = ft_convert_units(atlas,'cm');
-            
-            % INTERPOLATE DATA ON MRI
-            cfg                     = [];
-            cfg.parameter           = 'all';
-            cfg.interpmethod        = 'nearest';
-            data_int                = ft_sourceinterpolate(cfg,data,mri);
-            
-            % CREATE MASK (WHICH DOES NOT WORK AS INTENDED)
-            data_int.mask           = false(data_int.dim);
-            data_int.mask(data_int.clusterslabelmat > 0) = true;
-            
-            % CREATE ORTHO-PLOT
-            cfg                     = [];
-            cfg.method              = 'ortho';
-            cfg.funcolorlim         = 'maxabs';
-            cfg.funparameter        = 'clusterslabelmat';
-            cfg.maskparameter       = 'mask';
-            cfg.maskstyle           = 'opacity';
-            cfg.funcolormap         = 'bipolar';
-            cfg.camlight            = 'off';
-            cfg.atlas               = atlas;
-            cfg.title               = filename;   % not working
-            ft_sourceplot(cfg, data_int, mri);
-            
-            title(gca, filename,'Interpreter','none')
-            
-            % SAVE AS INTERACTIVE FIGURE
-            savefig([plots_path filesep filename])
-        end %mri plot
-        
-        % GLASS BRAIN PLOTTING ON DBSCAN OUTPUT
-        if sum(contains(plot,'glass','IgnoreCase',true)) > 0
-            
-            % LOAD MRI AND ATLAS
-            load standard_mri.mat;
-            
-            atlas   = ft_read_atlas([fileparts(which('ft_defaults')) '\template\atlas\aal\ROI_MNI_V4.nii']);
-            atlas   = ft_convert_units(atlas,'cm');
-            
-            % INTERPOLATE DATA ON MRI
-            cfg                     = [];
-            cfg.parameter           = 'all';
-            cfg.interpmethod        = 'nearest';
-            data_int                = ft_sourceinterpolate(cfg,data,mri);
+        save([outputpath filesep filename '.mat'], 'data');
 
-            % load discrete colormap
-            load('cb_discrete.mat');
-            
-            if num_clusters > 12
-                cb = cat(1,cb,cb);
-            end
-            
-            resFig = figure;
-            
-            figure;
-            fieldtrip_mesh = load('surface_pial_both.mat');
-            ft_plot_mesh(fieldtrip_mesh.mesh, 'facecolor', 'cortex', 'facealpha', 0.2);
-            hold on;
-            
-            for c = 1:num_clusters
-                pos{c}  = data_int.pos(data_int.clusterslabelmat == c,:);
-                xs      = pos{c}(:, 1);
-                ys      = pos{c}(:, 2);
-                zs      = pos{c}(:, 3);
-                
-                scatter3(xs, ys, zs, 5,cb(c,:),'filled');
-                hold on;
-            end
-            
-            label = strcat('Cluster ',cellstr(num2str((1:c)'))');
-            
-            % CREATE DIFFERENT VIEWS AND SAVE
-            view_angle = {[-180,0],[90,0],[0,0],[-90,0],[0,90]};
-            view_angle_labels = {'front', 'left', 'back', 'right', 'dorsal'};
-            
-            for ind = 1:numel(view_angle)              
-                pw_sourceSubplot(resFig,2,3,ind)
-                view(view_angle{ind});
-                title(view_angle_labels{ind});
-            end
-            
-            figure(resFig)
-            
-            leg = legend('brain',label{:});
-            set(leg,'Position',[0.75,0.2,0.1,0.2]);
-            set(gcf, 'color', 'white');
-            set(gca, 'color', 'white');
-            
-            % SAVE AS GRAPHIC
-            exportgraphics(gcf,[plots_path filesep filename '.png'],'Resolution',1000,'BackgroundColor','white');           
-        end %glass brain
+       %% PLOTTING
+%         
+%         % PLOT CLUSTERS ON ORTHOGONAL MRI SLICES
+%         if sum(contains(plot,'MRI','IgnoreCase',true)) > 0
+%             
+%             % LOAD MRI AND ATLAS
+%             load standard_mri.mat;
+%             
+%             mri     = ft_convert_units(mri,'cm');
+%             mri     = ft_volumereslice([],mri);
+%             
+%             atlas   = ft_read_atlas([fileparts(which('ft_defaults')) '\template\atlas\aal\ROI_MNI_V4.nii']);
+%             atlas   = ft_convert_units(atlas,'cm');
+%             
+%             % INTERPOLATE DATA ON MRI
+%             cfg                     = [];
+%             cfg.parameter           = 'all';
+%             cfg.interpmethod        = 'nearest';
+%             data_int                = ft_sourceinterpolate(cfg,data,mri);
+%             
+%             % CREATE MASK (WHICH DOES NOT WORK AS INTENDED)
+%             data_int.mask           = false(data_int.dim);
+%             data_int.mask(data_int.clusterslabelmat > 0) = true;
+%             
+%             % CREATE ORTHO-PLOT
+%             cfg                     = [];
+%             cfg.method              = 'ortho';
+%             cfg.funcolorlim         = 'maxabs';
+%             cfg.funparameter        = 'clusterslabelmat';
+%             cfg.maskparameter       = 'mask';
+%             cfg.maskstyle           = 'opacity';
+%             cfg.funcolormap         = 'bipolar';
+%             cfg.camlight            = 'off';
+%             cfg.atlas               = atlas;
+%             cfg.title               = filename;   % not working
+%             ft_sourceplot(cfg, data_int, mri);
+%             
+%             title(gca, filename,'Interpreter','none')
+%             
+%             % SAVE AS INTERACTIVE FIGURE
+%             savefig([plots_path filesep filename])
+%         end %mri plot
+%         
+%         % GLASS BRAIN PLOTTING ON DBSCAN OUTPUT
+%         if sum(contains(plot,'glass','IgnoreCase',true)) > 0
+%             
+%             % LOAD MRI AND ATLAS
+%             load standard_mri.mat;
+%             
+%             atlas   = ft_read_atlas([fileparts(which('ft_defaults')) '\template\atlas\aal\ROI_MNI_V4.nii']);
+%             atlas   = ft_convert_units(atlas,'cm');
+%             
+%             % INTERPOLATE DATA ON MRI
+%             cfg                     = [];
+%             cfg.parameter           = 'all';
+%             cfg.interpmethod        = 'nearest';
+%             data_int                = ft_sourceinterpolate(cfg,data,mri);
+% 
+%             % load discrete colormap
+%             load('cb_discrete.mat');
+%             
+%             if num_clusters > 12
+%                 cb = cat(1,cb,cb);
+%             end
+%             
+%             resFig = figure;
+%             
+%             figure;
+%             fieldtrip_mesh = load('surface_pial_both.mat');
+%             ft_plot_mesh(fieldtrip_mesh.mesh, 'facecolor', 'cortex', 'facealpha', 0.2);
+%              % PW standard facecolor: [0.78, 0.76, 0.66]
+%             hold on;
+%             
+%             for c = 1:num_clusters
+%                 pos{c}  = data_int.pos(data_int.clusterslabelmat == c,:);
+%                 xs      = pos{c}(:, 1);
+%                 ys      = pos{c}(:, 2);
+%                 zs      = pos{c}(:, 3);
+%                 
+%                 scatter3(xs, ys, zs, 5,cb(c,:),'filled');
+%                 hold on;
+%             end
+%             
+%             label = strcat('Cluster ',cellstr(num2str((1:c)'))');
+%             
+%             % CREATE DIFFERENT VIEWS AND SAVE
+%             view_angle = {[-180,0],[90,0],[0,0],[-90,0],[0,90]};
+%             view_angle_labels = {'front', 'left', 'back', 'right', 'dorsal'};
+%             
+%             for ind = 1:numel(view_angle)              
+%                 pw_sourceSubplot(resFig,2,3,ind)
+%                 view(view_angle{ind});
+%                 title(view_angle_labels{ind});
+%             end
+%             
+%             figure(resFig)
+%             
+%             leg = legend('brain',label{:});
+%             set(leg,'Position',[0.75,0.2,0.1,0.2]);
+%             set(gcf, 'color', 'white');
+%             set(gca, 'color', 'white');
+%             
+%             % SAVE AS GRAPHIC
+%             exportgraphics(gcf,[plots_path filesep filename '.png'],'Resolution',1000,'BackgroundColor','white');           
+%         end %glass brain
 
     end % contrast loop
 end % freq loop
