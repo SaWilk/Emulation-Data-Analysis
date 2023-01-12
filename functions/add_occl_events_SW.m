@@ -1,5 +1,7 @@
 function OUTEEG = add_occl_events(INEEG)
 
+% Adapted by Saskia Wilken
+
 TMPEEG=INEEG;
 
 %% all relevant triggers

@@ -1,6 +1,8 @@
 % Add additional Fields to Event structure
 
-% Adds error per epoch, latency between pursuit peak and trajectory peak
+% Adds event fuelds:
+% - error per epoch
+% - latency between pursuit peak and trajectory peak
 
 % Author: Saskia Wilken
 % Creation Date: 05.09.2022
@@ -52,14 +54,14 @@ cd(subdir_peaks);
 file_names = dir('*.set');
 %concatenate into one cell array
 files2read = {file_names.name};
+% load eeg data
 for idx = 1:length(files2read)
-
     EEG = pop_loadset('filename',files2read{idx});
     [ALLEEG, EEG] = eeg_store(ALLEEG, EEG);
-
 end
 eeglab redraw
 TMPEEG = ALLEEG;
+
 
 %% Calculate Error per Epoch and put in event field
 
@@ -72,10 +74,6 @@ for s = 1:length(TMPEEG)
     % transform ms time points in samples
     epoch_lims = epoch_lims * EEG.srate;
     % get the latencies of the peaks around which epoching was done
-    %     count = 0;
-    %     for peak = 1:length(TMPEEG(s).urevent)
-    %         count = strcmp(TMPEEG(s).urevent(peak).type, 'S 40') + count;
-    %     end % ok, so peak latencies contains all the peak event latencies.
 
     for ep = 1:size(TMPEEG(s).data, 3)
 
@@ -108,15 +106,7 @@ for s = 1:length(TMPEEG)
                     epoch_end = length(cur_error);
                 end
                 error_of_epoch = mean(cur_error(epoch_start:epoch_end), 'omitnan');
-% %                  logic check
-%                 figure()
-%                 plot([epoch_start:epoch_end]*0.004, cur_purs(epoch_start:epoch_end))
-%                 hold on
-%                 plot([epoch_start:epoch_end]*0.004, cur_track(epoch_start:epoch_end))
-%                 plot([epoch_start:epoch_end]*0.004, cur_error(epoch_start:epoch_end))
-%                 hold off
-%                 legend("pursuit", "trajectory", "error")
-%                 xline(epoch_trial_latency*0.004)
+
                 % work on event field
                 % get event fields that belong to epoch
                 epoch_idx = find([EEG.event.epoch] == ep);
@@ -152,26 +142,6 @@ end
 
 eeglab redraw
 
-% eeg_retrieve() % Retrieve an EEG dataset from the variable
-%                    containing all datasets (standard: TMPEEG).
-
-% %% Rename electrodes in EEG files
-% 
-% % renaming the electrodes from P5 and P6 onwards
-% % renaming the elctrodes O10 and O9 to PO10 and PO9
-% false_labels_trodes = {'P7', 'P8', 'P9', 'P10', 'P11', 'P12', 'O9', 'O10'};
-% rename_trodes = {'P5', 'P6', 'P7', 'P8', 'P9', 'P10', 'PO9', 'PO10'};
-% 
-% for s = 1:length(ALLEEG)
-%     EEG = ALLEEG(s);
-%     for trode = 1:length(rename_trodes)
-%         trode_idx = find(strcmpi(false_labels_trodes{trode}, {EEG.chanlocs.labels}));
-%         EEG.chanlocs(trode_idx).labels = rename_trodes{trode};
-%     end
-%     ALLEEG(s) = EEG;
-% end
-% Obviously not working. Let's not do that. 
-
 
 %% Calculate latency of pursuit peak following trajectory peak and put in event field
 
@@ -193,10 +163,6 @@ for s = 1:length(TMPEEG)
     % transform ms time points in samples
     epoch_lims = epoch_lims * TMPEEG(s).srate;
     % get the latencies of the peaks around which epoching was done
-    %     count = 0;
-    %     for peak = 1:length(TMPEEG(s).urevent)
-    %         count = strcmp(TMPEEG(s).urevent(peak).type, 'S 40') + count;
-    %     end % ok, so peak latencies contains all the peak event latencies.
 
     EEG = TMPEEG(s);
 
@@ -283,9 +249,6 @@ for s = 1:length(TMPEEG)
                     all_purs_lat{ep} = purs_lat;
                     for srow = 1:length(epoch_idx)
                         EEG.event(epoch_idx(srow)).('pursuit_lat') = purs_lat;
-                        % also add normalized latency
-                        % EEG.event(epoch_idx(srow)).('pursuit_lat_z') = normalize(purs_lat, 'zscore');
-
                     end
                 else
                     for srow = 1:length(epoch_idx)
@@ -325,5 +288,4 @@ for s = 1:length(TMPEEG)
 end
 
 eeglab redraw
-
 

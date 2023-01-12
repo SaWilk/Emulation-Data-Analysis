@@ -119,7 +119,7 @@ subtitle_string = strcat(['all channels']);
 %% add fieldtrip path
 
 % fieldtrip path
-addpath 'C:\Users\swilk\AppData\Roaming\MathWorks\MATLAB Add-Ons\Collections\FieldTrip'
+% Add fieldtrip path here
 
 ft_defaults;
 
@@ -186,7 +186,6 @@ neighbours        = neighbours; % ft_prepare_neighbours(cfg_neighb, dataFC_LP);
 
 % CLUSTER TEST
 calpha{1}  = 0.001;
-% calpha{2}  = 0.01;
 alpha  = 0.05;
 
 % cfg is the configuraiton structure of fieldtrip
@@ -197,15 +196,15 @@ cfg.ivar                = 2;
 cfg.channel             = {'all'};
 cfg.avgovertime         = 'yes';
 cfg.method              = 'montecarlo';
-cfg.statistic           = 'depsamplesT'; % really indepsamples??? - With comparison against 0
+cfg.statistic           = 'depsamplesT'; % indepsamples With comparison against 0
 cfg.correctm            = 'cluster';
-cfg.clusteralpha        = calpha{1};               % 0.05;
+cfg.clusteralpha        = calpha{1};  
 cfg.clusterstatistic    = 'maxsum';
 cfg.minnbchan           = 2;
 cfg.neighbours          = neighbours;
 cfg.tail                = 0;
 cfg.clustertail         = 0;
-cfg.alpha               = alpha;               % 0.025;
+cfg.alpha               = alpha;        
 cfg.numrandomization    = 3000;
 cfg.latency             = [0, 0.75];% time range to perform the CBP-Test on 
 

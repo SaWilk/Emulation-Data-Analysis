@@ -23,24 +23,11 @@ addpath(file_path);
 
 % get data paths for parent dirs
 filepath_parts = strsplit(file_path, filesep);
-parent_dir = filepath_parts(1:end-1);
-parent_dir = strjoin(parent_dir, filesep);
 parent_dir_2 = filepath_parts(1:end-2);
 parent_dir_2 = strjoin(parent_dir_2, filesep);
 output_dir = strjoin([parent_dir_2, "Emulation-Data-Output"], filesep);
-track_data_dir = strjoin([output_dir, "03_parallelize_with_traj"], filesep);
-mean_matrices_path = strjoin([output_dir, 'mean_matrices'], filesep);
-mkdir(mean_matrices_path);
-mean_matrices_peaks_epoched_path = strjoin([mean_matrices_path, 'peaks'], filesep);
-mkdir(mean_matrices_peaks_epoched_path);
-peak_erp_plots_dir = strjoin([parent_dir, "plots", "erp_plots", "peaks"], filesep);
-mkdir(peak_erp_plots_dir);
 % output
 csd_dir = strjoin([output_dir, "csd_transform"], filesep);
-% input
-epochs_plus_error_dir = strjoin([output_dir, "07_epochs_with_extra_fields"], filesep);
-% cluster based permutation test
-neighbors_dir = strjoin([parent_dir_2, "Emulation-Data-Input", "EEG_files"], filesep);
 
 
 %% Load CDS data
@@ -111,12 +98,15 @@ end
 
 %% Create Condition-Specific ALLEEG Datasets
 
+% Remove the behavioral events of the first 500 ms of each trial
 for s = 1:length(ALLEEG)
     EEG = ALLEEG(s);
     EEG = pop_selectevent( EEG, 'artifact_error',{'VALID'},'deleteevents',...
         'off','deleteepochs','on','invertepochs','off');
     ALLEEG(s) = EEG;
 end
+
+% Uncomment this if you want to investigate the contrast OCCLUDED - VISIBLE
 CONDEEG = ALLEEG;
 % remove occluded VISIBLE
 for s = 1:length(CONDEEG)
@@ -134,6 +124,7 @@ for s = 1:length(CONDEEG2)
     CONDEEG2(s) = EEG;
 end
 
+% Uncomment this if you want to investigate the contrast CONSTANT - RANDOM
 % remove random CONSTANT
 % CONDEEG = ALLEEG;
 % 
@@ -166,8 +157,6 @@ for s = 2:length(CONDEEG)
     % normalize data
     z_tmpEEG.data = [];
     z_tmpEEG.data = normalize(CONDEEG(s).data,2, 'zscore');
-    % get location where new data should go
-%     data_idx = size(TMPEEG.data, 3)+1:size(TMPEEG.data, 3)+size(z_tmpEEG.data, 3);
     % concatenate subject data in one dataset
     TMPEEG.data = cat(3, z_tmpEEG.data, TMPEEG.data);
 %      TMPEEG.data(:,:,data_idx) =
@@ -206,8 +195,6 @@ for s = 2:length(CONDEEG2)
     % normalize data
     z_tmpEEG.data = [];
     z_tmpEEG.data = normalize(CONDEEG2(s).data,2, 'zscore');
-    % get location where new data should go
-%     data_idx = size(TMPEEG.data, 3)+1:size(TMPEEG.data, 3)+size(z_tmpEEG.data, 3);
     % concatenate subject data in one dataset
     TMPEEG2.data = cat(3, z_tmpEEG.data, TMPEEG2.data);
 %      TMPEEG.data(:,:,data_idx) =

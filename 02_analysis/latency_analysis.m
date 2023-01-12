@@ -33,8 +33,6 @@ track_data_dir = strjoin([output_dir, "03_parallelize_with_traj"], filesep);
 % output
 csd_dir = strjoin([output_dir, "csd_transform"], filesep);
 
-all_subj_sets_dir = 'C:\wilken\Emulation-Data-Output\all_subjects_in_same_set';
-
 
 %% Load CDS data
 

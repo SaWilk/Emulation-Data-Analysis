@@ -3,7 +3,6 @@
 % creation date: 02.06.2022
 % Author: Saskia Wilken
 
-% this script
 % -reads in tracking data,
 % - upsamples it,
 % - calculates tracking error,
@@ -144,26 +143,12 @@ for s = 1:length(subj_ids)
             % interpolate using spline interpolation
             inter_traj_y = spline(time_vec, tmp_traj_y, inter_time_vec);
 
-            % proof that it works well:
-            %         figure
-            %         plot(no_points, inter_traj_y, 'ob')
-            %         hold on
-            %         plot(time_vec, tmp_traj_y, '.r')
-            %         hold off
             % same for pursuit
             tmp_purs_y = track_data(s).trials.(task_names{task})(t).purs_y;
             inter_purs_y = spline(time_vec, tmp_purs_y, inter_time_vec);
             % note that x axis points are milliseconds now.
 
-            % proof that it works well:
-            %         figure
-            %         plot(tmp_purs_x, tmp_purs_y, 'ob')
-            %         hold on
-            %         plot(no_points, inter_purs_y, '.r')
-            %         hold off
-
             % for now, I am just deleting the error columns
-            % TODO: adjust or re-calculate error in Matlab
             tmp_mat = [inter_time_vec; inter_traj_y; inter_purs_y].';
 
             for c = 1:size(tmp_mat, 2)
@@ -196,7 +181,6 @@ clear cur_traj cur_purs cur_err
 
 %% Load EEG data
 
-% now we need eeglab
 eeglab;
 close all
 cd(eeg_data_path);
@@ -208,42 +192,21 @@ EEG = pop_loadset('filename', files2read);
 eeg_struct = ALLEEG;
 
 
-%% Put Tracking and EEG Data in the same structure / or actually, just
-% remove subjects that have no corresponding eeg data.
-
-% all_data_struct = eeg_struct;
+%% Remove subjects that have no corresponding eeg data.
 
 % remove all subjects that have no correcponding tracking data
 
 for s = 1:length(eeg_struct)
-
-    % this is such smart code...
-    % it will loop through all data struct but give an index where the
+    % loop through all data struct but give an index where the
     % elements of all_data_struct are in track_data
     tmp_idx(s) = find(cellfun(@isequal, {track_data.subject}, ...
         repmat({eeg_struct(s).subject}, size({track_data.subject}))));
-
 end
+
 % keep only subjects with eeg and tracking data
 backup_data = track_data;
 track_data = track_data(tmp_idx);
 subj_ids = subj_ids(tmp_idx);
-
-
-% Deprecated: Put tracking and eeg data in same strucure
-% field_names = fieldnames(copy_data);
-% % nope, it does not seem to be possible to concatenate structures
-% % without a loop
-% for s = 1:size(copy_data,2)
-%     if strcmp(copy_data(s).subject, all_data_struct(s).subject)
-%         for f = 1:length(field_names)
-%             % put tracking data in all data struct
-%             all_data_struct(s).(field_names{f}) = copy_data(s).(field_names{f});
-%         end
-%     else
-%         disp(strcat(all_data_struct(s).subject, " has no matching tracking data"));
-%     end
-% end
 
 
 %% Insert Trial Start and End Events, Remove Practice Trials, Add Trial Number and Latency Fields
@@ -254,7 +217,7 @@ subj_ids = subj_ids(tmp_idx);
 %     "fix":          12,
 %     "trial_start_L":13,
 %     "trial_start_R":14,
-%     "trial_end":    15, # superfluous with fix trigger (except for break)
+%     "trial_end":    15, 
 %     "pause_start":  16,
 %     "pause_end":    17,
 %     "exp_end":      18,
@@ -291,21 +254,11 @@ for s = 1:size(eeg_struct,2)
         event(688:689)= [];
     end
 
-    event_cat = categorical({event.type});
-    categories(event_cat);
-    % if you should ever feel the need to count cats, there you go:
-    countcats(event_cat); % this gives you how many triggers of each type there are.
-
     % is this task c?
     if any(strcmp({event.type}, repmat("S 30",size({event.type},1), size({event.type},2) ))) | ...
             any(strcmp({event.type}, repmat("S 28",size({event.type},1), size({event.type},2) )))
         warning(strcat(['Caution! Subject', eeg_struct(s).subject, 'seems to be a task C trigger file. Skipping']));
         continue
-        % if it is not, is this task b?
-        %     elseif any(strcmp({event.type}, repmat("S 20",size({event.type},1), size({event.type},2) ))) | ...
-        %            any(strcmp({event.type}, repmat("S 21",size({event.type},1), size({event.type},2) )))
-        %         warning(strcat(['Caution! Subject', eeg_struct(s).subject, ' seems to be a task B trigger file. Skipping']));
-        %         continue
     end
 
     % delete all triggers before S11
@@ -337,8 +290,6 @@ for s = 1:size(eeg_struct,2)
                 last_trigger = "none";
                 continue
             end
-            %             disp(strcat("is true for ", num2str(i)))
-            %             disp(strcat("following event", event(i+1).type))
             % save current trigger for next loop iteration
             last_trigger = event(i).type;
             % copy the row in question
@@ -420,9 +371,6 @@ for s = 1:size(eeg_struct,2)
 
 end
 
-% Notes: 91L3HA is excluded because recording started too late.
-% WM87B is excluded cause there is no behavioral data.
-
 
 %% Find Peaks of Tracking Data and put them in Events
 
@@ -454,14 +402,6 @@ for s = 1:size(eeg_struct,2)
                 % locate current trial in eeg event
                 cur_trial_idx = find([event_cur_task.trial_number] == t);
 
-                %
-                %             if length(trial_starts) ~= length(trial_ends)
-                %                 warning(strcat(['Subject ', eeg_struct(s).subject, ...
-                %                     ' does not have an equal number of start and end trial ' ...
-                %                     'triggers in ', char(task_names{task}), '. Skipping.']))
-                %                 break
-                %             end
-
                 % get the latencies of the current trial in the eeg data
                 current_start_latency = event_cur_task(cur_trial_idx(1)).latency;
                 current_end_latency = event_cur_task(cur_trial_idx(end)).latency;
@@ -483,14 +423,6 @@ for s = 1:size(eeg_struct,2)
                     event_cur_task = [event_cur_task(1:current_event_idx-1), ...
                         event_cur_task(current_event_idx), event_cur_task(current_event_idx:end)];
 
-                    % To which conditions does the peak belong to?
-                    %     "occlusion":    20,
-                    %     "reappear":     21,
-                    %     "fourth_trial": 22,
-                    %     "start_constant": 23,
-                    %     "end_constant": 24,
-                    % replace the copied rows' type with S 40, making sure the
-                    % second event is overwritten
                     % if we deal with a local max,
                     if any(current_trial_peak_latencies(idx) == index_max_traj)
                         % assign S 40 to it
@@ -506,19 +438,6 @@ for s = 1:size(eeg_struct,2)
                     event_cur_task(current_event_idx+1).trial_latency_ms = event_cur_task(current_event_idx+1).trial_latency/250*1000;
                     event_cur_task(current_event_idx+1).trial_number = t;
                                         event_cur_task(current_event_idx+1).trial_number = t;
-
-%                     event_cur_task(current_event_idx+1).occlusion = occ_state;
-%                     event_cur_task(current_event_idx+1).constant = const_state;
-
-                    % in order to separate the peaks in the
-%                     conditions, I need to add a field that labels each
-%                     peak as either having happened while the trajectory
-%                     was occluded or while it was visible. TODO.
-% in the end this will be used in the STUDY to select a design and the
-% independent variable under edit deisgn DONE.
-% additional thought: It might also make sense to add the error for each
-% epoch in the event structure as a continuous variable  DONE
-
                 end
             end
             % copy the event structure into a temporary field in eeg_struct
@@ -561,21 +480,11 @@ for s = 1:size(eeg_struct,2)
                 % get peak indices within trial trajectory data
                 [~, index_max_purs, ~, prom_max_purs] = findpeaks(...
                     current_trial_purs, 'MinPeakProminence', PROMINENCE_TRHESH_PURS);
-%                 hold on 
-%                 plot(track_data(s).upsamp_data.(task_names{task})(t).traj_y)
                 [~, index_min_purs, ~, prom_min_purs] = findpeaks(...
                     -current_trial_purs, 'MinPeakProminence', PROMINENCE_TRHESH_PURS);
 
                 % locate current trial in eeg event
                 cur_trial_idx = find([event_cur_task.trial_number] == t);
-
-                %
-                %             if length(trial_starts) ~= length(trial_ends)
-                %                 warning(strcat(['Subject ', eeg_struct(s).subject, ...
-                %                     ' does not have an equal number of start and end trial ' ...
-                %                     'triggers in ', char(task_names{task}), '. Skipping.']))
-                %                 break
-                %             end
 
                 % get the latencies of the current trial in the eeg data
                 current_start_latency = event_cur_task(cur_trial_idx(1)).latency;
@@ -598,12 +507,6 @@ for s = 1:size(eeg_struct,2)
                     event_cur_task = [event_cur_task(1:current_event_idx-1), ...
                         event_cur_task(current_event_idx), event_cur_task(current_event_idx:end)];
 
-                    % To which conditions does the peak belong to?
-                    %     "occlusion":    20,
-                    %     "reappear":     21,
-                    %     "fourth_trial": 22,
-                    %     "start_constant": 23,
-                    %     "end_constant": 24,
                     % replace the copied rows' type with S 40, making sure the
                     % second event is overwritten
                     % if we deal with a local max,
@@ -620,17 +523,6 @@ for s = 1:size(eeg_struct,2)
                     event_cur_task(current_event_idx+1).trial_latency = current_trial_peak_latencies(idx);
                     event_cur_task(current_event_idx+1).trial_latency_ms = event_cur_task(current_event_idx+1).trial_latency/250*1000;
                     event_cur_task(current_event_idx+1).trial_number = t;
-%                     event_cur_task(current_event_idx+1).occlusion = occ_state;
-%                     event_cur_task(current_event_idx+1).constant = const_state;
-
-% in order to separate the peaks in the
-%                     conditions, I need to add a field that labels each
-%                     peak as either having happened while the trajectory
-%                     was occluded or while it was visible. TODO.
-% in the end this will be used in the STUDY to select a design and the
-% independent variable under edit deisgn DONE.
-% additional thought: It might also make sense to add the error for each
-% epoch in the event structure as a continuous variable  DONE
                 end
                 % locate current trial in eeg event
                 cur_trial_idx = find([event_cur_task.trial_number] == t);
@@ -649,13 +541,13 @@ for s = 1:size(eeg_struct,2)
     end
 end
 
+
 %% Add latencies of trial a events to trial b events
 
 for s = 1:length(subj_ids)
     event = eeg_struct(s).track_event_peaks;
-    first_task_b_idx = min(find(strcmp({event.task}, 'task_b')))+1; % for
-    % some weird reason, the first event of task b is not actually of task
-    % b...
+    first_task_b_idx = min(find(strcmp({event.task}, 'task_b')))+1; % the 
+    % first event of task b is not actually of task b...
     for lat = first_task_b_idx:length(event)            
         event(lat).latency = event(lat).latency + event(first_task_b_idx-1).latency;
     end
@@ -665,42 +557,33 @@ end
 
 %% Remove historical fields; can be commented out here easily for re-tracing changes
 
-% tmp_struct = eeg_struct;
-
 for s = 1:size(eeg_struct, 2)
     eeg_struct(s).event = eeg_struct(s).track_event_peaks;
 end
 eeg_struct = rmfield(eeg_struct, ["track_event", "track_event_peaks"]);
 
-% isequal(fieldnames(ALLEEG), fieldnames(tmp_struct))
-
 
 %% Add Fields in Event Strucure for Occlusion and Constant
-
-% copy_struct = eeg_struct;
 
 for s = 1:length(subj_ids)
 
     %apply add_occl_events --> create OCCL var in EEG.event (coding
-    %occl = occl/non_occl
     eeg_struct(s) = add_occl_events_SW(eeg_struct(s));
 
-        %apply add_traj_events --> create TRAJ var in EEG.event (coding
-    %traj = rand1/const/rand2
+    %apply add_traj_events --> create TRAJ var in EEG.event (coding
     eeg_struct(s) = add_traj_events_SW(eeg_struct(s));
 
 end
 
 
-%% Reject Trials Behaviorally
+%% Reject Trials With Bad Behavioral Data
 
-% store max and mean errors and exclude trials which start with error.  
+% store max and mean errors and trials which start with error.  
 count = 1;
 count2 = 1;
 for s = 1:length(subj_ids)
     for task = 1:2
         for t = 1:size(track_data(s).trials.(task_names{task}), 2)
-            %             error_cell{s}{task}{t} = track_data(s).upsamp_data.(task_names{task})(t).error;
             cur_mean_errors = track_data(s).upsamp_data.(task_names{task})(t).mean_error;
             cur_error = track_data(s).upsamp_data.(task_names{task})(t).error;
             % store biggest error value in current trial
@@ -753,7 +636,9 @@ rem_trials(end+1:end+size(tmp,1), :) = tmp;
 
 clear cur_subj cur_task cur_trial
 
-for s = unique(sort(rem_trials(:,1)))' % took me half an hour, but for loops loop through the columns... duh!
+% actual deletion in events and tracking data
+
+for s = unique(sort(rem_trials(:,1)))'
     for task = unique(sort(rem_trials(s == rem_trials(:,1), 2)))'
         for t = rem_trials(s == rem_trials(:,1) & task == rem_trials(:,2), 3)'
 
@@ -769,9 +654,6 @@ for s = unique(sort(rem_trials(:,1)))' % took me half an hour, but for loops loo
 
             cur_task([cur_task.trial_number] == t) = cur_trial;
             cur_subj(strcmp({cur_subj.task}, task_names{task})) = cur_task;
-            %             for f = 1:length(field_names)
-            %                 {eeg_struct(s).event.(field_names{f})} = {cur_subj.(field_names{f})};
-            %             end
             eeg_struct(s).event = cur_subj;
             clear cur_subj cur_task cur_trial
 
@@ -794,43 +676,7 @@ for s = unique(sort(rem_trials(:,1)))' % took me half an hour, but for loops loo
 end
 
 
-%% Replace Constant Traj Trigger from .vmrk with calculated from .npz TODO
-
-%align constant trajectories of several trials
-%compare constant trajectory and trial trajectory at every point
-%calculate variance of difference
-%should be minimal at constant trajectory
-
-% s = 1;
-% t = 2;
-% % add constant traj path to matlab path
-% tmp_path = strsplit(file_path, '\');
-% tmp_path(end) = [];
-% const_traj_path = [strjoin(tmp_path, '\'), '\functions'];
-% addpath(const_traj_path);
-% % load constant traj
-% const_traj_fix = load([const_traj_path, 'const_traj_fixed.mat']);
-% % upsample constant traj
-% % x
-% const_traj_fix_upsamp = linspace(const_traj_fix(1,1), const_traj_fix(end,1), round(length(const_traj_fix(:,1))/FR*SR))';
-% % y
-% const_traj_fix_upsamp(:,2) = spline(const_traj_fix(:,1), const_traj_fix(:,2), const_traj_fix_upsamp);
-% % plot(const_traj_fix_upsamp(:,1), const_traj_fix_upsamp(:,2))
-% 
-% for s = 1:length(subj_ids)
-%     for task = 1:2
-%         for t = 1:size(track_data(s).trials.(task_names{task}), 2)
-%             % load current trial of interest
-%             cur_trial = track_data(s).upsamp_data.(task_names{task})(t);
-%             cur_traj = [cur_trial.traj_x, cur_trial.traj_y];
-%             % use align_const_traj function to get new event latencies
-%             [shift, start_ind, end_ind] = align_to_const_traj(const_traj_fix_upsamp, cur_traj);
-%         end
-%     end
-% end
-
-
-%% Remove Subject 18
+%% Remove Subject 18 (artifactual behavioral data)
 
 idx = find(strcmp({track_data.subject}, 'KMY6K'));
 track_data(idx) = [];
