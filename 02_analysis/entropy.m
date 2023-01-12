@@ -50,10 +50,11 @@ task_names = fieldnames(track_data(1).upsamp_data);
 SAMP_DIST = 4;
 count = 1;
 entropy_vals = [];
-
 R = 0.2; % tolerance threshold
 % "to make sure we know the variance of the data and it is the same for
 % every sample, we z-transform the data." Source: DOI: 10.3390/e21060541
+
+% Entropy Calculation per Trial
 for s = 1:size(track_data,2)
     for task = 1:2
         for t = 1:size(track_data(s).upsamp_data.(task_names{task}),2)
@@ -74,6 +75,8 @@ for s = 1:size(track_data,2)
     end % task
 end % subject
 
+% Uncomment this if you want to calculate one entropy value per subject
+% only (for statistical tests)
 % count = 1;
 % clear subject_entropy
 % % version with one value per subject
@@ -105,6 +108,7 @@ ALPHA = 0.05;
 EDGES = linspace(min([data1, data2],[], 'all'), max([data1, data2], [], 'all'), N_BINS+1);
 [p,h,stats] = signrank(data1,data2, 'Alpha', ALPHA)
 
+% Plot Code
 figure()
 histogram(data1, 'FaceAlpha', 0.3, 'FaceColor', 'b', 'BinEdges', EDGES)
 hold on
