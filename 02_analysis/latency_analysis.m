@@ -1,9 +1,15 @@
-%% Latency Analysis for Cluster Occluded Visible Negative 1
+% The neurophysiology of continuous action monitoring
+% Saskia Wilken, Adriana Böttcher, Nico Adelhöfer, Markus Raab, Sven
+% Hoffmann & Christian Beste
 
+% Latency Analysis for Cluster Occluded Visible Negative 1
 % Calculates the latency between occluded and visible condition in one
 % cluster
-% Author: Saskia Wilken
-% Creation date: 09.12.2022
+
+% Created by: 
+% Saskia Wilken, General Psychology: Judgement, Decision Making & Action, 
+% University of Hagen
+% 09.12.2022
 
 
 %% empty everything

@@ -1,5 +1,8 @@
-%% Entropy Calculation 
-%
+% The neurophysiology of continuous action monitoring
+% Saskia Wilken, Adriana Böttcher, Nico Adelhöfer, Markus Raab, Sven
+% Hoffmann & Christian Beste
+
+% Entropy Calculation 
 % - Calculates sample entropy for each pursuit of each
 % subject using track_data.mat
 % - Tests whether the first 500 ms of each trial have significantly different 
@@ -7,8 +10,11 @@
 % - Plots the result
 % - Verison that calculates the Sample Etrnopy per Subject included
 
-% Author: Saskia Wilken
-% Creation date: 10.11.2022
+% Created by: 
+% Saskia Wilken, General Psychology: Judgement, Decision Making & Action, 
+% University of Hagen
+% 10.11.2022
+
 
 %% empty everything
 

@@ -1,10 +1,15 @@
+% The neurophysiology of continuous action monitoring
+% Saskia Wilken, Adriana Böttcher, Nico Adelhöfer, Markus Raab, Sven
+% Hoffmann & Christian Beste
+
 % CSD transformation
+% calculate the surface laplacians for the eeg data 
+% saves the transformed ERP datasets
 
-% this script calculated the surface laplacians for the eeg data and saves
-% the transformed ERP datasets
-
-% author: Saskia Wilken
-% creation date: 05.09.2022 
+% Created by: 
+% Saskia Wilken, General Psychology: Judgement, Decision Making & Action, 
+% University of Hagen
+% 05.09.2022 
 
 
 %% empty everything

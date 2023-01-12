@@ -1,10 +1,19 @@
-%% Vincentile EEG Data According to Performance Measures of Purusit
+% The neurophysiology of continuous action monitoring
+% Saskia Wilken, Adriana Böttcher, Nico Adelhöfer, Markus Raab, Sven
+% Hoffmann & Christian Beste
 
+% Vincentile EEG Data According to Performance Measures of Purusit
 % Combines all data in one datasets, vincentiles the eeg data according to
 % ehavioral data and plots ERPimages that show how EEG data changes based
 % on the different performance measures
-% Author: Saskia Wilken
-% Creation Date: 18.10.22
+
+% Created by: 
+% Saskia Wilken, General Psychology: Judgement, Decision Making & Action, 
+% University of Hagen
+% 18.10.22
+
+
+%% Define Paths 
 
 % get data paths for parent dirs
 filepath_parts = strsplit(file_path, filesep);
