@@ -1,8 +1,8 @@
-%% Parallelize Tracking and EEG Data
+% The neurophysiology of continuous action monitoring
+% Saskia Wilken, Adriana Böttcher, Nico Adelhöfer, Markus Raab, Sven
+% Hoffmann & Christian Beste
 
-% creation date: 02.06.2022
-% Author: Saskia Wilken
-
+% Parallelize Tracking and EEG Data
 % -reads in tracking data,
 % - upsamples it,
 % - calculates tracking error,
@@ -16,6 +16,11 @@
 % function
 % - saves eeglab .sets that contain the new event field and a .mat file
 % that contains that contains the tracking data.
+
+% Created by: 
+% Saskia Wilken, General Psychology: Judgement, Decision Making & Action, 
+% University of Hagen
+% 02.06.2022
 
 
 %% Empty
@@ -683,8 +688,6 @@ track_data(idx) = [];
 
 
 %% Save sets
-
-% https://eeglab.org/tutorials/ConceptsGuide/Data_Structures.html
 
 EEG_file_name_suffix = "parallelized";
 track_file_name_suffix = "all_tracking_data.mat";

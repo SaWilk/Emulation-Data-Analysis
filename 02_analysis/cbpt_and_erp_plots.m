@@ -1,10 +1,16 @@
+% The neurophysiology of continuous action monitoring
+% Saskia Wilken, Adriana Böttcher, Nico Adelhöfer, Markus Raab, Sven
+% Hoffmann & Christian Beste
+
 % ERP analyses
+% creates plots 
+% performs further analyses to investigate ERP
 
-% creates plots and performs further analyses to investigate
-% ERP
+% Created by: 
+% Saskia Wilken, General Psychology: Judgement, Decision Making & Action, 
+% University of Hagen
+% 21.09.2022 
 
-% author: Saskia Wilken
-% creation date: 21.09.2022 
 
 %% empty everything
 

@@ -1,11 +1,17 @@
-% Add additional Fields to Event structure
+% The neurophysiology of continuous action monitoring
+% Saskia Wilken, Adriana Böttcher, Nico Adelhöfer, Markus Raab, Sven
+% Hoffmann & Christian Beste
 
+% Add additional Fields to Event structure
 % Adds event fuelds:
 % - error per epoch
 % - latency between pursuit peak and trajectory peak
 
-% Author: Saskia Wilken
-% Creation Date: 05.09.2022
+% Created by: 
+% Saskia Wilken, General Psychology: Judgement, Decision Making & Action, 
+% University of Hagen
+% 05.09.2022
+
 
 %% Empty
 

@@ -1,10 +1,16 @@
-%% T-Tests and Plotting of Vincentile Results
+% The neurophysiology of continuous action monitoring
+% Saskia Wilken, Adriana Böttcher, Nico Adelhöfer, Markus Raab, Sven
+% Hoffmann & Christian Beste
 
+% T-Tests and Plotting of Vincentile Results
 % Calculates T-Tests with Bootstrapping, Effect Sizes and plots the results
 % in a) singificance matrices for EEG x Behavioral Data bins and b) into
 % vincentile per effect size plots for behavioral data only
-% Author: Saskia Wilken
-% Creation Date: 02.11.22
+
+% Created by: 
+% Saskia Wilken, General Psychology: Judgement, Decision Making & Action, 
+% University of Hagen
+% 02.11.22
 
 
 %% Empty everything

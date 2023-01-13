@@ -1,9 +1,16 @@
-%% Behavioral Data Analyses
+% The neurophysiology of continuous action monitoring
+% Saskia Wilken, Adriana Böttcher, Nico Adelhöfer, Markus Raab, Sven
+% Hoffmann & Christian Beste
 
+% Behavioral Data Analyses
 % Analyses the tracking data, error measures, their association, how error
 % changes over the course of the trials, etc...
-% Author: Saskia Wilken
-% Creation Date: 18.10.2022
+
+% Created by: 
+% Saskia Wilken, General Psychology: Judgement, Decision Making & Action, 
+% University of Hagen
+% 18.10.2022
+
 
 %% empty everything
 

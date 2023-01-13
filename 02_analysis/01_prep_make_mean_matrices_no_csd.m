@@ -1,7 +1,14 @@
-%% Create Mean Matrices of Data without CSD Transformation before. 
+% The neurophysiology of continuous action monitoring
+% Saskia Wilken, Adriana Böttcher, Nico Adelhöfer, Markus Raab, Sven
+% Hoffmann & Christian Beste
 
-% Author: Saskia Wilken
-% creation Date: 28.06.2022
+% Create Mean Matrices of Data 
+% just without CSD Transformation before. 
+
+% Created by: 
+% Saskia Wilken, General Psychology: Judgement, Decision Making & Action, 
+% University of Hagen
+% 28.06.2022
 
 
 %% Empty

@@ -1,12 +1,15 @@
-%% Transform EEGLAB to LORETA-suitable data
-% use the eeglab plugin LORETA to save eeglab data suitable for the LORETA
-% standalone software that needs to be installed. Follow instrucitons in
-% this video: 
-% https://www.youtube.com/watch?v=amttvN_Sb6A
-% keep in mind that you need non-CSD-transformed data for that
+% The neurophysiology of continuous action monitoring
+% Saskia Wilken, Adriana Böttcher, Nico Adelhöfer, Markus Raab, Sven
+% Hoffmann & Christian Beste
 
-% Author: Saskia Wilken
-% Creation date: 09.10.2022
+% Transform EEGLAB to LORETA-suitable data
+% uses the eeglab plugin LORETA to save eeglab data suitable for the LORETA
+% standalone software
+
+% Created by: 
+% Saskia Wilken, General Psychology: Judgement, Decision Making & Action, 
+% University of Hagen
+% 09.10.2022
 
 
 %% empty everything
