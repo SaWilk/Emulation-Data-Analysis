@@ -1,4 +1,6 @@
 % The neurophysiology of continuous action monitoring
+% Saskia Wilken, Adriana Böttcher, Nico Adelhöfer, Markus Raab, Sven
+% Hoffmann, Christian Beste
 
 % preprocessing task A, pt. 1
 
