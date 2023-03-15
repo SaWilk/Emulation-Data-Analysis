@@ -56,6 +56,7 @@ close all
 for idx = 1:length(files2read)
 
     EEG = pop_loadset('filename',files2read{idx});
+
     [ALLEEG, EEG] = eeg_store(ALLEEG, EEG);
 
 end
